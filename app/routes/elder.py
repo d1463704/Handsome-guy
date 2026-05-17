@@ -1,30 +1,53 @@
 from flask import render_template, request, redirect, url_for, flash, session
 from . import elder_bp
+from app.models import status, reminder, user
+
+@elder_bp.before_request
+def require_elder_login():
+    if 'user_id' not in session or session.get('role') != 'elder':
+        flash('請先以長者身分登入', 'warning')
+        return redirect(url_for('auth.login'))
 
 @elder_bp.route('/dashboard')
 def dashboard():
-    """
-    長者的主控台首頁。
-    需要檢查是否已登入且身分為 elder。
-    載入當天提醒事項與當天打卡狀態，並顯示打卡/SOS大按鈕。
-    """
-    pass
+    user_id = session['user_id']
+    u = user.get_by_id(user_id)
+    
+    # 取得今日是否已打卡
+    checkin_record = status.get_today_checkin(user_id)
+    has_checked_in = checkin_record is not None
+
+    # 取得今日提醒事項
+    reminders = reminder.get_reminders_by_elder(user_id, active_only=True)
+
+    return render_template('elder/dashboard.html', 
+                           user=u, 
+                           has_checked_in=has_checked_in, 
+                           reminders=reminders)
 
 @elder_bp.route('/checkin', methods=['POST'])
 def checkin():
-    """
-    處理長者的「平安打卡」操作。
-    寫入 status_records 表中，type 為 CHECKIN。
-    處理完後重新導回 dashboard。
-    """
-    pass
+    user_id = session['user_id']
+    record_id = status.create({
+        'elder_id': user_id,
+        'type': 'CHECKIN'
+    })
+    if record_id:
+        flash('平安打卡成功！', 'success')
+    else:
+        flash('打卡失敗，請再試一次', 'danger')
+    return redirect(url_for('elder.dashboard'))
 
 @elder_bp.route('/sos', methods=['POST'])
 def sos():
-    """
-    處理長者的「緊急求助」操作。
-    寫入 status_records 表中，type 為 SOS。
-    未來可擴充自動寄信或呼叫 LINE Notify 的邏輯。
-    處理完後重新導回 dashboard，並顯示求救已送出。
-    """
-    pass
+    user_id = session['user_id']
+    record_id = status.create({
+        'elder_id': user_id,
+        'type': 'SOS'
+    })
+    if record_id:
+        flash('緊急求助已送出！已通知聯絡人！', 'danger')
+        # 未來擴充發送 Line Notify 等邏輯
+    else:
+        flash('求助發送失敗，請直接撥打電話！', 'danger')
+    return redirect(url_for('elder.dashboard'))
