@@ -1,6 +1,7 @@
-from flask import render_template, request, redirect, url_for, flash, session
-from . import family_bp
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from app.models import user, status, reminder
+
+family_bp = Blueprint('family', __name__, url_prefix='/family')
 
 @family_bp.before_request
 def require_family_login():

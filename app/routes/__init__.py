@@ -1,12 +1,6 @@
-from flask import Blueprint
-
-# 定義各個模組的 Blueprint
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
-elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
-family_bp = Blueprint('family', __name__, url_prefix='/family')
-
-# 在下方匯入各個模組以註冊路由
-from . import auth, elder, family
+from .auth import auth_bp
+from .elder import elder_bp
+from .family import family_bp
 
 def init_app(app):
     """

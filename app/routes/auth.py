@@ -1,9 +1,10 @@
-from flask import render_template, request, redirect, url_for, flash, session
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 import random
 import string
-from . import auth_bp
 from app.models import user
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():

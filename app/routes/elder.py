@@ -1,6 +1,7 @@
-from flask import render_template, request, redirect, url_for, flash, session
-from . import elder_bp
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from app.models import status, reminder, user
+
+elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
 
 @elder_bp.before_request
 def require_elder_login():
