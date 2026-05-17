@@ -1,3 +1,4 @@
+import sqlite3
 from .db import get_db_connection
 
 def create_user(role, username, password_hash, display_name, phone=None, elder_code=None):
