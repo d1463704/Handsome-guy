@@ -1,3 +1,7 @@
+"""
+獨居老人生活管家 — 應用程式入口點
+"""
+from app import create_app
 import os
 from flask import Flask
 from dotenv import load_dotenv
