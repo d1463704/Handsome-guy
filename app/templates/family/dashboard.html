@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}儀表板 — 獨居老人生活管家{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-grid-fill text-primary"></i> 家屬儀表板</h2>
+    <div>
+        <a href="{{ url_for('family.link_elder') }}" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill"></i> 綁定長者
+        </a>
+        <a href="{{ url_for('family.new_reminder') }}" class="btn btn-info text-white">
+            <i class="bi bi-alarm-fill"></i> 新增提醒
+        </a>
+    </div>
+</div>
+
+<!-- 快速導覽 -->
+<div class="row mb-5 g-3">
+    <div class="col-md-4">
+        <a href="{{ url_for('family.reminders') }}" class="text-decoration-none">
+            <div class="card border-0 bg-info text-white shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-card-checklist fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-0">管理提醒事項</h5>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('family.reports') }}" class="text-decoration-none">
+            <div class="card border-0 bg-success text-white shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-journal-check fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-0">歷史回報紀錄</h5>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('family.emergencies') }}" class="text-decoration-none">
+            <div class="card border-0 bg-danger text-white shadow-sm h-100 hover-card">
+                <div class="card-body text-center py-4">
+                    <i class="bi bi-exclamation-octagon-fill fs-1 mb-2"></i>
+                    <h5 class="fw-bold mb-0">緊急通報紀錄</h5>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<h4 class="fw-bold mb-3">長者狀態總覽</h4>
+
+{% if not elders_status %}
+<div class="card border-0 shadow-sm text-center py-5">
+    <div class="card-body">
+        <i class="bi bi-people text-muted display-4 mb-3"></i>
+        <h5 class="text-muted">您尚未綁定任何長者</h5>
+        <p class="text-muted mb-4">請點擊上方「綁定長者」按鈕，輸入長者的帳號進行綁定。</p>
+        <a href="{{ url_for('family.link_elder') }}" class="btn btn-primary">立即綁定</a>
+    </div>
+</div>
+{% else %}
+<div class="row g-4">
+    {% for status in elders_status %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 {% if status.emergency_count > 0 %}border-danger border-2{% endif %}">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-person-circle text-primary"></i> {{ status.elder.display_name }}
+                </h5>
+                <span class="badge bg-secondary rounded-pill">{{ status.elder.username }}</span>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span>今日回報</span>
+                        {% if status.reported_today %}
+                            {% if status.report_status == 'safe' %}
+                                <span class="badge bg-success rounded-pill px-3 py-2"><i class="bi bi-check-circle"></i> 已回報安好</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark rounded-pill px-3 py-2"><i class="bi bi-exclamation-circle"></i> 需要協助</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">尚未回報</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span>待完成提醒</span>
+                        {% if status.pending_reminders > 0 %}
+                            <span class="badge bg-info rounded-pill px-3 py-2">{{ status.pending_reminders }} 項待辦</span>
+                        {% else %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">全數完成</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <span>緊急通報</span>
+                        {% if status.emergency_count > 0 %}
+                            <span class="badge bg-danger rounded-pill px-3 py-2 animate-pulse">{{ status.emergency_count }} 筆未處理！</span>
+                        {% else %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">無異常</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+            {% if status.emergency_count > 0 %}
+            <div class="card-footer bg-white border-top-0 pb-3">
+                <a href="{{ url_for('family.emergencies') }}" class="btn btn-danger w-100 fw-bold">前往處理緊急通報</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

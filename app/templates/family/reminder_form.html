@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ '編輯' if reminder else '新增' }}提醒 — 獨居老人生活管家{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="fw-bold"><i class="bi bi-alarm text-info"></i> {{ '編輯' if reminder else '新增' }}提醒事項</h2>
+            <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> 返回列表
+            </a>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form action="{{ url_for('family.update_reminder', rid=reminder.id) if reminder else url_for('family.create_reminder') }}" method="POST">
+                    
+                    {% if not reminder %}
+                    <div class="mb-4">
+                        <label for="elder_id" class="form-label fw-bold">選擇長者（必填）</label>
+                        <select class="form-select form-select-lg" id="elder_id" name="elder_id" required>
+                            <option value="">請選擇...</option>
+                            {% for elder in elders %}
+                            <option value="{{ elder.id }}">{{ elder.display_name }} ({{ elder.username }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if not elders %}
+                        <div class="form-text text-danger">您尚未綁定任何長者，請先去綁定！</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label fw-bold">提醒標題（必填）</label>
+                        <input type="text" class="form-control form-control-lg" id="title" name="title" value="{{ reminder.title if reminder else '' }}" placeholder="例：吃高血壓藥" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-bold">詳細說明（選填）</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="例：飯後吃，一次兩顆">{{ reminder.description if reminder else '' }}</textarea>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label for="remind_time" class="form-label fw-bold">提醒時間（必填）</label>
+                            <input type="time" class="form-control form-control-lg" id="remind_time" name="remind_time" value="{{ reminder.remind_time if reminder else '08:00' }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="repeat_type" class="form-label fw-bold">重複設定</label>
+                            <select class="form-select form-select-lg" id="repeat_type" name="repeat_type" onchange="toggleDueDate()">
+                                <option value="daily" {% if reminder and reminder.repeat_type == 'daily' %}selected{% endif %}>每天</option>
+                                <option value="weekly" {% if reminder and reminder.repeat_type == 'weekly' %}selected{% endif %}>每週</option>
+                                <option value="once" {% if reminder and reminder.repeat_type == 'once' %}selected{% endif %}>單次</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="due_date_container" style="{% if not reminder or reminder.repeat_type != 'once' %}display: none;{% endif %}">
+                            <label for="due_date" class="form-label fw-bold">日期</label>
+                            <input type="date" class="form-control form-control-lg" id="due_date" name="due_date" value="{{ reminder.due_date if reminder else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-5">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold" {% if not reminder and not elders %}disabled{% endif %}>
+                            <i class="bi bi-save"></i> 儲存提醒
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleDueDate() {
+    const repeatType = document.getElementById('repeat_type').value;
+    const dueDateContainer = document.getElementById('due_date_container');
+    const dueDateInput = document.getElementById('due_date');
+    
+    if (repeatType === 'once') {
+        dueDateContainer.style.display = 'block';
+        dueDateInput.required = true;
+    } else {
+        dueDateContainer.style.display = 'none';
+        dueDateInput.required = false;
+    }
+}
+</script>
+{% endblock %}

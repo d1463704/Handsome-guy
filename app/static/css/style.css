@@ -1,0 +1,62 @@
+/* 全域設定 */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* 共用工具類 */
+.max-w-800 {
+    max-width: 800px;
+}
+
+/* 長者大按鈕樣式 */
+.btn-elder-action {
+    border-radius: 20px;
+    padding: 3rem 1rem;
+    transition: all 0.3s ease;
+    border-width: 3px;
+}
+.btn-elder-action:hover:not(:disabled) {
+    transform: translateY(-5px);
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+}
+
+.btn-elder-emergency {
+    border-radius: 20px;
+    padding: 4rem 1rem;
+    transition: all 0.3s ease;
+    background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+    border: none;
+}
+.btn-elder-emergency:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 1rem 3rem rgba(220,53,69,.4)!important;
+}
+
+/* 動畫效果 */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.animate-pulse {
+    animation: pulse 2s infinite;
+}
+
+/* 卡片特效 */
+.hover-card {
+    transition: all 0.2s ease;
+}
+.hover-card:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.05);
+}
+
+/* 表格樣式優化 */
+.table>tbody>tr>td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
