@@ -57,4 +57,58 @@
         </form>
     </div>
 </div>
+{% block content %}
+<div class="text-center mb-5 mt-4">
+    <h1 class="display-3 fw-bold text-primary">您好，{{ user.display_name }}</h1>
+    {% if user.elder_code %}
+    <div class="d-inline-block bg-white p-3 rounded-4 shadow-sm mt-3">
+        <p class="fs-4 mb-0 text-muted">您的綁定碼：<strong class="text-dark fs-3">{{ user.elder_code }}</strong></p>
+        <small class="text-secondary">(請將此碼給家屬以完成綁定)</small>
+    </div>
+    {% endif %}
+</div>
+
+<div class="row mb-5 justify-content-center">
+    <div class="col-md-8">
+        {% if has_checked_in %}
+        <div class="alert alert-success text-center p-5 rounded-4 shadow border-0">
+            <h1 class="display-4 fw-bold mb-0">✅ 您今天已經平安打卡！</h1>
+        </div>
+        {% else %}
+        <form action="{{ url_for('elder.checkin') }}" method="POST">
+            <button type="submit" class="btn elder-btn checkin-btn shadow-lg">我很好 (平安打卡)</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-5 justify-content-center">
+    <div class="col-md-8">
+        <form action="{{ url_for('elder.sos') }}" method="POST" onsubmit="return confirm('確定要發送緊急求助嗎？聯絡人將會收到通知！');">
+            <button type="submit" class="btn elder-btn sos-btn shadow-lg">SOS 緊急求助</button>
+        </form>
+    </div>
+</div>
+
+{% if reminders %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-lg border-warning rounded-4 overflow-hidden">
+            <div class="card-header bg-warning text-dark text-center py-4 border-0">
+                <h2 class="mb-0 fw-bold">⭐ 今日重要提醒 ⭐</h2>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for r in reminders %}
+                <li class="list-group-item p-4 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="display-6 fw-bold">{{ r.title }}</span>
+                        <span class="display-6 text-primary fw-bold bg-light px-3 py-1 rounded-3">{{ r.remind_time }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

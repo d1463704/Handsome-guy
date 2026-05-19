@@ -60,3 +60,4 @@ def init_db(app):
         with open(schema_path, 'r', encoding='utf-8') as f:
             conn.executescript(f.read())
         conn.close()
+# 標示此目錄為 Python Package
