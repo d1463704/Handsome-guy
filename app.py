@@ -13,6 +13,11 @@ def create_app():
     from app.routes import init_app
     init_app(app)
 
+    @app.route('/')
+    def index():
+        from flask import redirect, url_for
+        return redirect(url_for('auth.login'))
+
     return app
 
 app = create_app()
