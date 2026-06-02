@@ -1,5 +1,9 @@
+"""
+提醒事項模型 — 管理用藥、回診等提醒
+"""
 import sqlite3
 from .db import get_db_connection
+
 
 def create(data):
     """新增一筆提醒事項"""
@@ -18,6 +22,7 @@ def create(data):
     finally:
         conn.close()
 
+
 def get_all():
     """取得所有提醒事項"""
     conn = get_db_connection()
@@ -29,6 +34,7 @@ def get_all():
     finally:
         conn.close()
 
+
 def get_by_id(reminder_id):
     """取得單筆提醒事項"""
     conn = get_db_connection()
@@ -39,6 +45,7 @@ def get_by_id(reminder_id):
         return None
     finally:
         conn.close()
+
 
 def update(reminder_id, data):
     """更新提醒事項內容"""
@@ -56,6 +63,7 @@ def update(reminder_id, data):
     finally:
         conn.close()
 
+
 def delete(reminder_id):
     """刪除提醒事項"""
     conn = get_db_connection()
@@ -68,6 +76,7 @@ def delete(reminder_id):
         return False
     finally:
         conn.close()
+
 
 def get_reminders_by_elder(elder_id, active_only=True):
     """取得特定長者的提醒事項"""
@@ -84,6 +93,7 @@ def get_reminders_by_elder(elder_id, active_only=True):
         return []
     finally:
         conn.close()
+
 
 def update_status(reminder_id, is_active):
     """單純更新提醒事項啟用狀態"""

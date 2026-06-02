@@ -1,54 +1,84 @@
 {% extends "base.html" %}
+{% block title %}家屬儀表板 — 獨居老人生活管家{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-    <h2 class="mb-0 fw-bold text-primary">照護狀態總覽</h2>
-    <a href="{{ url_for('family.bind') }}" class="btn btn-primary shadow-sm">
-        + 綁定新長者
+<div class="d-flex justify-content-between align-items-center mb-5 mt-4">
+    <h1 class="mb-0 fw-bold text-primary"><i class="bi bi-grid-fill me-2"></i>照護狀態總覽</h1>
+    <a href="{{ url_for('family.bind') }}" class="btn btn-primary btn-lg shadow-sm fw-bold rounded-pill px-4">
+        <i class="bi bi-person-plus-fill me-2"></i>綁定新長者
     </a>
 </div>
 
 {% if not elder_status %}
-<div class="alert alert-info p-5 text-center shadow-sm rounded-4 border-0">
-    <h3 class="alert-heading fw-bold mb-3">您尚未綁定任何長者！</h3>
-    <p class="fs-5 text-muted mb-4">請前往「綁定長者」頁面，輸入長者專屬的 6 位數綁定碼來建立關聯。</p>
-    <a href="{{ url_for('family.bind') }}" class="btn btn-primary btn-lg rounded-pill px-5">立即綁定</a>
+<div class="alert alert-info p-5 text-center shadow-sm rounded-4 border-0 mt-4">
+    <div class="display-1 text-info mb-4"><i class="bi bi-people-fill"></i></div>
+    <h2 class="alert-heading fw-bold mb-3">您尚未綁定任何長者！</h2>
+    <p class="fs-4 text-muted mb-5">請前往「綁定長者」頁面，輸入長者專屬的 6 位數綁定碼來建立關聯。</p>
+    <a href="{{ url_for('family.bind') }}" class="btn btn-info text-white btn-lg rounded-pill px-5 fw-bold fs-4 shadow">立即綁定</a>
 </div>
-{% endif %}
-
-<div class="row">
+{% else %}
+<div class="row g-4">
     {% for es in elder_status %}
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0 h-100 rounded-4">
-            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
-                <h4 class="mb-0 fw-bold">{{ es.elder.display_name }}</h4>
-                {% if es.has_checkin_today %}
-                <span class="badge bg-success bg-opacity-10 text-success border border-success fs-6 rounded-pill px-3">今日已平安</span>
-                {% else %}
-                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fs-6 rounded-pill px-3">今日尚未打卡</span>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-4"><small>聯絡電話：{{ es.elder.phone or '未提供' }}</small></p>
-                <h6 class="text-muted fw-bold mb-3">最近動態</h6>
-                <ul class="list-group list-group-flush rounded-3 border">
-                    {% for r in es.recent_records %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center p-3">
-                        <span>
-                            {% if r.type == 'SOS' %}
-                            <strong class="text-danger">🆘 緊急求助</strong>
-                            {% else %}
-                            <strong class="text-success">✅ 平安打卡</strong>
-                            {% endif %}
+    <div class="col-xl-6 mb-4">
+        <div class="card shadow border-0 h-100 rounded-4 overflow-hidden">
+            <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+                <h3 class="mb-0 fw-bold text-dark"><i class="bi bi-person-circle text-primary me-2"></i>{{ es.elder.display_name }}</h3>
+                <div>
+                    {% if es.has_checkin_today %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success fs-5 rounded-pill px-3 py-2 shadow-sm">
+                            <i class="bi bi-check-circle-fill me-1"></i>今日已平安
                         </span>
-                        <span class="text-muted small">{{ r.created_at }}</span>
-                    </li>
+                        {% if es.today_mood %}
+                            <span class="badge bg-light text-dark border fs-5 rounded-pill px-3 py-2 ms-2 shadow-sm">
+                                心情：
+                                {% if es.today_mood == 1 %}😢 很不好
+                                {% elif es.today_mood == 2 %}😟 不太好
+                                {% elif es.today_mood == 3 %}😐 普通
+                                {% elif es.today_mood == 4 %}😊 不錯
+                                {% elif es.today_mood == 5 %}😄 很棒！
+                                {% endif %}
+                            </span>
+                        {% endif %}
                     {% else %}
-                    <li class="list-group-item text-center text-muted p-4">尚無任何紀錄</li>
-                    {% endfor %}
-                </ul>
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fs-5 rounded-pill px-3 py-2 shadow-sm animate-pulse">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>今日尚未打卡
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <p class="text-muted mb-4 fs-5"><i class="bi bi-telephone-fill me-2"></i>聯絡電話：{{ es.elder.phone or '未提供' }}</p>
+                
+                <h5 class="text-muted fw-bold mb-3"><i class="bi bi-activity me-2"></i>最近動態</h5>
+                <div class="bg-light rounded-4 p-2 border">
+                    <ul class="list-group list-group-flush rounded-3">
+                        {% for r in es.recent_records %}
+                        <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-3 border-bottom-0">
+                            <span class="fs-5">
+                                {% if r.type == 'SOS' %}
+                                <strong class="text-danger"><i class="bi bi-exclamation-octagon-fill me-2"></i>緊急求助</strong>
+                                {% else %}
+                                <strong class="text-success"><i class="bi bi-shield-check me-2"></i>平安打卡</strong>
+                                {% endif %}
+                            </span>
+                            <span class="text-muted"><i class="bi bi-clock me-1"></i>{{ r.created_at }}</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item bg-transparent text-center text-muted py-4 border-bottom-0">
+                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>尚無任何紀錄
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0">
+                <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2">
+                    <i class="bi bi-bell-fill me-2"></i>管理提醒事項
+                </a>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
+{% endif %}
 {% endblock %}

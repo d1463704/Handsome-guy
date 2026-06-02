@@ -1,5 +1,11 @@
+"""
+使用者模型 — 帳號的建立、查詢、綁定操作
+"""
 import sqlite3
+import random
+import string
 from .db import get_db_connection
+
 
 def create(data):
     """新增一筆使用者記錄"""
@@ -9,7 +15,7 @@ def create(data):
         cursor.execute(
             "INSERT INTO users (role, username, password_hash, display_name, phone, elder_code) "
             "VALUES (?, ?, ?, ?, ?, ?)",
-            (data.get('role'), data.get('username'), data.get('password_hash'), 
+            (data.get('role'), data.get('username'), data.get('password_hash'),
              data.get('display_name'), data.get('phone'), data.get('elder_code'))
         )
         conn.commit()
@@ -19,6 +25,7 @@ def create(data):
         return None
     finally:
         conn.close()
+
 
 def get_all():
     """取得所有使用者記錄"""
@@ -31,6 +38,7 @@ def get_all():
     finally:
         conn.close()
 
+
 def get_by_id(user_id):
     """取得單筆使用者記錄"""
     conn = get_db_connection()
@@ -41,6 +49,7 @@ def get_by_id(user_id):
         return None
     finally:
         conn.close()
+
 
 def update(user_id, data):
     """更新使用者記錄"""
@@ -58,6 +67,7 @@ def update(user_id, data):
     finally:
         conn.close()
 
+
 def delete(user_id):
     """刪除使用者記錄"""
     conn = get_db_connection()
@@ -71,7 +81,7 @@ def delete(user_id):
     finally:
         conn.close()
 
-# 額外業務邏輯方法
+
 def get_user_by_username(username):
     """透過帳號取得使用者"""
     conn = get_db_connection()
@@ -83,16 +93,20 @@ def get_user_by_username(username):
     finally:
         conn.close()
 
+
 def get_user_by_elder_code(elder_code):
     """透過綁定碼取得長者"""
     conn = get_db_connection()
     try:
-        return conn.execute("SELECT * FROM users WHERE elder_code = ? AND role = 'elder'", (elder_code,)).fetchone()
+        return conn.execute(
+            "SELECT * FROM users WHERE elder_code = ? AND role = 'elder'", (elder_code,)
+        ).fetchone()
     except sqlite3.Error as e:
         print(f"Database error in user.get_user_by_elder_code: {e}")
         return None
     finally:
         conn.close()
+
 
 def bind_elder_to_family(family_id, elder_id):
     """綁定長者與家屬"""
@@ -112,6 +126,7 @@ def bind_elder_to_family(family_id, elder_id):
         return False
     finally:
         conn.close()
+
 
 def get_bound_elders(family_id):
     """取得家屬綁定的所有長者"""

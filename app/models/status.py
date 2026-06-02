@@ -1,15 +1,19 @@
+"""
+狀態紀錄模型 — 平安打卡（含心情評分）與 SOS 緊急求助
+"""
 import sqlite3
 from .db import get_db_connection
 from datetime import datetime
 
+
 def create(data):
-    """新增狀態紀錄 (CHECKIN 或 SOS)"""
+    """新增狀態紀錄 (CHECKIN 含心情評分 / SOS)"""
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO status_records (elder_id, type) VALUES (?, ?)",
-            (data.get('elder_id'), data.get('type'))
+            "INSERT INTO status_records (elder_id, type, mood_score) VALUES (?, ?, ?)",
+            (data.get('elder_id'), data.get('type'), data.get('mood_score'))
         )
         conn.commit()
         return cursor.lastrowid
@@ -18,6 +22,7 @@ def create(data):
         return None
     finally:
         conn.close()
+
 
 def get_all():
     """取得系統中所有打卡紀錄"""
@@ -30,6 +35,7 @@ def get_all():
     finally:
         conn.close()
 
+
 def get_by_id(record_id):
     """取得單筆紀錄"""
     conn = get_db_connection()
@@ -41,8 +47,9 @@ def get_by_id(record_id):
     finally:
         conn.close()
 
+
 def update(record_id, data):
-    """更新紀錄 (通常不會用到，為了符合標準實作)"""
+    """更新紀錄"""
     conn = get_db_connection()
     try:
         conn.execute(
@@ -57,6 +64,7 @@ def update(record_id, data):
     finally:
         conn.close()
 
+
 def delete(record_id):
     """刪除紀錄"""
     conn = get_db_connection()
@@ -69,6 +77,7 @@ def delete(record_id):
         return False
     finally:
         conn.close()
+
 
 def get_records_by_elder(elder_id, limit=50):
     """取得特定長者的所有紀錄"""
@@ -84,8 +93,9 @@ def get_records_by_elder(elder_id, limit=50):
     finally:
         conn.close()
 
+
 def get_today_checkin(elder_id):
-    """檢查長者今天是否已經平安打卡"""
+    """檢查長者今天是否已經平安打卡，回傳包含 mood_score 的紀錄"""
     today_date = datetime.now().strftime('%Y-%m-%d')
     conn = get_db_connection()
     try:

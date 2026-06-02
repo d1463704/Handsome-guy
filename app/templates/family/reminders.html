@@ -1,74 +1,96 @@
 {% extends "base.html" %}
+{% block title %}提醒設定 — 獨居老人生活管家{% endblock %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 mt-2">
-    <h2 class="mb-0 fw-bold text-success">提醒事項管理</h2>
+<div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    <h1 class="mb-0 fw-bold text-primary"><i class="bi bi-bell-fill me-2"></i>提醒事項設定</h1>
 </div>
 
-<div class="card shadow-sm border-0 rounded-4 mb-5">
-    <div class="card-header bg-success text-white py-3 rounded-top-4">
-        <h5 class="mb-0 fw-bold">➕ 新增提醒事項</h5>
-    </div>
-    <div class="card-body p-4 bg-light rounded-bottom-4">
-        <form action="{{ url_for('family.reminders') }}" method="POST" class="row g-3 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label fw-bold">選擇長者</label>
-                <select name="elder_id" class="form-select border-0 shadow-sm" required>
-                    <option value="">請選擇...</option>
-                    {% for elder in elders %}
-                    <option value="{{ elder.id }}">{{ elder.display_name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-5">
-                <label class="form-label fw-bold">提醒內容</label>
-                <input type="text" name="title" class="form-control border-0 shadow-sm" placeholder="例如：吃降血壓藥" required>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label fw-bold">時間</label>
-                <input type="time" name="remind_time" class="form-control border-0 shadow-sm" required>
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm">新增提醒</button>
-            </div>
-        </form>
-    </div>
+{% if not elders %}
+<div class="alert alert-warning p-5 text-center shadow-sm rounded-4 border-0 mt-4">
+    <div class="display-1 text-warning mb-4"><i class="bi bi-exclamation-triangle-fill"></i></div>
+    <h3 class="fw-bold mb-3">您尚未綁定任何長者，無法設定提醒！</h3>
+    <a href="{{ url_for('family.bind') }}" class="btn btn-warning text-dark fw-bold px-5 py-2 rounded-pill shadow-sm">前往綁定長者</a>
 </div>
-
+{% else %}
 <div class="row">
-    {% for item in all_reminders %}
-    <div class="col-12 mb-4">
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-header bg-white border-bottom-0 pt-4 pb-2">
-                <h5 class="mb-0 fw-bold text-primary">{{ item.elder.display_name }} 的提醒清單</h5>
+    <!-- 新增提醒表單 -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow border-0 rounded-4 sticky-top" style="top: 20px; z-index: 1;">
+            <div class="card-header bg-primary text-white border-bottom-0 py-3 rounded-top-4">
+                <h4 class="mb-0 fw-bold"><i class="bi bi-plus-circle-fill me-2"></i>新增提醒</h4>
             </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush rounded-bottom-4">
-                    {% for r in item.reminders %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center p-4">
-                        <div>
-                            <span class="fs-5 me-3 fw-bold {{ 'text-muted text-decoration-line-through' if r.is_active == 0 else '' }}">{{ r.title }}</span>
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary fs-6 rounded-pill px-3">{{ r.remind_time }}</span>
-                        </div>
-                        <div class="d-flex">
-                            <form action="{{ url_for('family.toggle_reminder', reminder_id=r.id) }}" method="POST" class="me-2">
-                                {% if r.is_active == 1 %}
-                                <button type="submit" class="btn btn-outline-warning btn-sm fw-bold">停用</button>
-                                {% else %}
-                                <button type="submit" class="btn btn-outline-success btn-sm fw-bold">啟用</button>
-                                {% endif %}
-                            </form>
-                            <form action="{{ url_for('family.delete_reminder', reminder_id=r.id) }}" method="POST" onsubmit="return confirm('確定要刪除這筆提醒嗎？');">
-                                <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">刪除</button>
-                            </form>
-                        </div>
-                    </li>
-                    {% else %}
-                    <li class="list-group-item text-muted text-center p-5 bg-light">目前沒有設定任何提醒</li>
-                    {% endfor %}
-                </ul>
+            <div class="card-body p-4">
+                <form action="{{ url_for('family.reminders') }}" method="POST">
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted">選擇對象</label>
+                        <select name="elder_id" class="form-select form-select-lg bg-light border-0 shadow-sm" required>
+                            {% for elder in elders %}
+                            <option value="{{ elder.id }}">{{ elder.display_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted">提醒標題</label>
+                        <input type="text" name="title" class="form-control form-control-lg bg-light border-0 shadow-sm" placeholder="例如：吃高血壓藥、量血壓..." required>
+                    </div>
+                    <div class="mb-5">
+                        <label class="form-label fw-bold text-muted">提醒時間 (24小時制)</label>
+                        <input type="time" name="remind_time" class="form-control form-control-lg bg-light border-0 shadow-sm" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold rounded-pill shadow-sm">新增提醒</button>
+                </form>
             </div>
         </div>
     </div>
-    {% endfor %}
+
+    <!-- 提醒列表 -->
+    <div class="col-md-7">
+        {% for er in all_reminders %}
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-light border-bottom-0 py-3 rounded-top-4">
+                <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-person-circle text-primary me-2"></i>{{ er.elder.display_name }} 的提醒事項</h4>
+            </div>
+            <div class="card-body p-0">
+                {% if er.reminders %}
+                <ul class="list-group list-group-flush rounded-bottom-4">
+                    {% for r in er.reminders %}
+                    <li class="list-group-item p-4 d-flex justify-content-between align-items-center {{ 'bg-light text-muted' if r.is_active == 0 else '' }}">
+                        <div>
+                            <h5 class="mb-1 fw-bold {{ 'text-decoration-line-through' if r.is_active == 0 else '' }}">{{ r.title }}</h5>
+                            <div class="text-primary fw-bold fs-5"><i class="bi bi-clock-history me-1"></i>{{ r.remind_time }}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <form action="{{ url_for('family.toggle_reminder', reminder_id=r.id) }}" method="POST">
+                                {% if r.is_active == 1 %}
+                                <button type="submit" class="btn btn-outline-warning btn-sm fw-bold rounded-pill px-3 shadow-sm" title="暫停提醒">
+                                    <i class="bi bi-pause-fill"></i> 暫停
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-outline-success btn-sm fw-bold rounded-pill px-3 shadow-sm" title="啟用提醒">
+                                    <i class="bi bi-play-fill"></i> 啟用
+                                </button>
+                                {% endif %}
+                            </form>
+                            <form action="{{ url_for('family.delete_reminder', reminder_id=r.id) }}" method="POST" onsubmit="return confirm('確定要刪除這個提醒嗎？');">
+                                <button type="submit" class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3 shadow-sm" title="刪除">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center p-5 text-muted">
+                    <i class="bi bi-inbox fs-1 mb-3 d-block"></i>
+                    <h5>尚無提醒事項</h5>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
+{% endif %}
 {% endblock %}

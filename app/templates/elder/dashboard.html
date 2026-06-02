@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% block title %}主頁 — 獨居老人生活管家{% endblock %}
+
 {% block content %}
 <div class="text-center mb-5 mt-4">
-    <h1 class="display-3 fw-bold text-primary">您好，{{ user.display_name }}</h1>
+    <h1 class="display-2 fw-bold text-primary mb-3">您好，{{ user.display_name }}</h1>
+    <p class="display-6 text-muted">今天感覺如何呢？</p>
     {% if user.elder_code %}
-    <div class="d-inline-block bg-white p-3 rounded-4 shadow-sm mt-3">
-        <p class="fs-4 mb-0 text-muted">您的綁定碼：<strong class="text-dark fs-3">{{ user.elder_code }}</strong></p>
+    <div class="d-inline-block bg-white p-3 rounded-4 shadow-sm mt-3 border">
+        <p class="fs-4 mb-0 text-muted">您的綁定碼：<strong class="text-primary fs-2 ms-2">{{ user.elder_code }}</strong></p>
         <small class="text-secondary">(請將此碼給家屬以完成綁定)</small>
     </div>
     {% endif %}
@@ -13,13 +16,54 @@
 <div class="row mb-5 justify-content-center">
     <div class="col-md-8">
         {% if has_checked_in %}
-        <div class="alert alert-success text-center p-5 rounded-4 shadow border-0">
-            <h1 class="display-4 fw-bold mb-0">✅ 您今天已經平安打卡！</h1>
-        </div>
+            <div class="alert alert-success text-center p-5 rounded-4 shadow border-0">
+                <h1 class="display-4 fw-bold mb-4">✅ 您今天已經平安打卡！</h1>
+                {% if today_mood %}
+                <h3 class="text-secondary">
+                    今日心情：
+                    {% if today_mood == 1 %}😢 很不好
+                    {% elif today_mood == 2 %}😟 不太好
+                    {% elif today_mood == 3 %}😐 普通
+                    {% elif today_mood == 4 %}😊 不錯
+                    {% elif today_mood == 5 %}😄 很棒！
+                    {% endif %}
+                </h3>
+                {% endif %}
+            </div>
         {% else %}
-        <form action="{{ url_for('elder.checkin') }}" method="POST">
-            <button type="submit" class="btn elder-btn checkin-btn shadow-lg">我很好 (平安打卡)</button>
-        </form>
+            <div class="card shadow-lg border-0 rounded-4 p-4 text-center">
+                <h3 class="mb-4 fw-bold text-success">📝 請選擇您今天的心情，再按下平安打卡</h3>
+                <form action="{{ url_for('elder.checkin') }}" method="POST">
+                    <div class="d-flex justify-content-center gap-3 mb-5">
+                        <label>
+                            <input type="radio" name="mood_score" value="1" class="mood-radio" required>
+                            <div class="mood-btn btn btn-outline-danger">😢</div>
+                            <div class="mt-2 text-danger fw-bold fs-5">很不好</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="2" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-warning">😟</div>
+                            <div class="mt-2 text-warning fw-bold fs-5">不太好</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="3" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-secondary">😐</div>
+                            <div class="mt-2 text-secondary fw-bold fs-5">普通</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="4" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-info">😊</div>
+                            <div class="mt-2 text-info fw-bold fs-5">不錯</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="5" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-success">😄</div>
+                            <div class="mt-2 text-success fw-bold fs-5">很棒！</div>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn elder-btn checkin-btn shadow-lg">我很好 (平安打卡)</button>
+                </form>
+            </div>
         {% endif %}
     </div>
 </div>
@@ -27,24 +71,28 @@
 <div class="row mb-5 justify-content-center">
     <div class="col-md-8">
         <form action="{{ url_for('elder.sos') }}" method="POST" onsubmit="return confirm('確定要發送緊急求助嗎？聯絡人將會收到通知！');">
-            <button type="submit" class="btn elder-btn sos-btn shadow-lg">SOS 緊急求助</button>
+            <button type="submit" class="btn elder-btn sos-btn shadow-lg animate-pulse">
+                🆘 SOS 緊急求助
+            </button>
         </form>
     </div>
 </div>
 
 {% if reminders %}
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-5">
     <div class="col-md-8">
-        <div class="card shadow-lg border-warning rounded-4 overflow-hidden">
-            <div class="card-header bg-warning text-dark text-center py-4 border-0">
-                <h2 class="mb-0 fw-bold">⭐ 今日重要提醒 ⭐</h2>
+        <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
+            <div class="card-header bg-white text-dark text-center py-4 border-0">
+                <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
             </div>
             <ul class="list-group list-group-flush">
                 {% for r in reminders %}
-                <li class="list-group-item p-4 border-bottom">
+                <li class="list-group-item p-4">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="display-6 fw-bold">{{ r.title }}</span>
-                        <span class="display-6 text-primary fw-bold bg-light px-3 py-1 rounded-3">{{ r.remind_time }}</span>
+                        <span class="display-6 fw-bold text-dark">{{ r.title }}</span>
+                        <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
+                            <i class="bi bi-clock-history"></i> {{ r.remind_time }}
+                        </span>
                     </div>
                 </li>
                 {% endfor %}

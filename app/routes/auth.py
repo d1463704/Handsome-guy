@@ -1,3 +1,4 @@
+"""認證路由 — 註冊 / 登入 / 登出"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 import random
@@ -5,6 +6,7 @@ import string
 from app.models import user
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 def register():
@@ -21,12 +23,11 @@ def register():
 
         existing_user = user.get_user_by_username(username)
         if existing_user:
-            flash('此帳號已被使用', 'danger')
+            flash('此帳號已被使用，請選擇其他帳號', 'danger')
             return redirect(url_for('auth.register'))
 
         elder_code = None
         if role == 'elder':
-            # 產生 6 位數隨機碼
             elder_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
         password_hash = generate_password_hash(password)
@@ -46,6 +47,7 @@ def register():
             flash('註冊失敗，請稍後再試', 'danger')
 
     return render_template('auth/register.html')
+
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
@@ -67,6 +69,7 @@ def login():
             flash('帳號或密碼錯誤', 'danger')
 
     return render_template('auth/login.html')
+
 
 @auth_bp.route('/logout')
 def logout():

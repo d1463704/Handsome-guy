@@ -1,7 +1,9 @@
+"""長者路由 — 平安打卡（含心情評分）/ 緊急求助 / 查看提醒"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from app.models import status, reminder, user
 
 elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
+
 
 @elder_bp.before_request
 def require_elder_login():
@@ -9,46 +11,64 @@ def require_elder_login():
         flash('請先以長者身分登入', 'warning')
         return redirect(url_for('auth.login'))
 
+
 @elder_bp.route('/dashboard')
 def dashboard():
     user_id = session['user_id']
     u = user.get_by_id(user_id)
-    
-    # 取得今日是否已打卡
+
+    # 今日是否已打卡
     checkin_record = status.get_today_checkin(user_id)
     has_checked_in = checkin_record is not None
+    today_mood = checkin_record['mood_score'] if checkin_record else None
 
-    # 取得今日提醒事項
+    # 今日提醒事項
     reminders = reminder.get_reminders_by_elder(user_id, active_only=True)
 
-    return render_template('elder/dashboard.html', 
-                           user=u, 
-                           has_checked_in=has_checked_in, 
+    return render_template('elder/dashboard.html',
+                           user=u,
+                           has_checked_in=has_checked_in,
+                           today_mood=today_mood,
                            reminders=reminders)
+
 
 @elder_bp.route('/checkin', methods=['POST'])
 def checkin():
     user_id = session['user_id']
+
+    # 確認今日尚未打卡
+    if status.get_today_checkin(user_id):
+        flash('您今天已經打過卡了！', 'info')
+        return redirect(url_for('elder.dashboard'))
+
+    mood_score = request.form.get('mood_score', type=int)
+    if not mood_score or mood_score not in range(1, 6):
+        flash('請選擇您今天的心情喔！', 'warning')
+        return redirect(url_for('elder.dashboard'))
+
     record_id = status.create({
         'elder_id': user_id,
-        'type': 'CHECKIN'
+        'type': 'CHECKIN',
+        'mood_score': mood_score
     })
     if record_id:
-        flash('平安打卡成功！', 'success')
+        mood_labels = {1: '😢 很不好', 2: '😟 不太好', 3: '😐 普通', 4: '😊 不錯', 5: '😄 很棒！'}
+        flash(f'平安打卡成功！今日心情：{mood_labels.get(mood_score, "")}', 'success')
     else:
         flash('打卡失敗，請再試一次', 'danger')
     return redirect(url_for('elder.dashboard'))
+
 
 @elder_bp.route('/sos', methods=['POST'])
 def sos():
     user_id = session['user_id']
     record_id = status.create({
         'elder_id': user_id,
-        'type': 'SOS'
+        'type': 'SOS',
+        'mood_score': None
     })
     if record_id:
-        flash('緊急求助已送出！已通知聯絡人！', 'danger')
-        # 未來擴充發送 Line Notify 等邏輯
+        flash('🚨 緊急求助已送出！已通知聯絡人！', 'danger')
     else:
         flash('求助發送失敗，請直接撥打電話！', 'danger')
     return redirect(url_for('elder.dashboard'))
