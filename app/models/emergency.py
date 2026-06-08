@@ -65,7 +65,7 @@ class Emergency:
             rows = db.execute(
                 '''SELECT e.*, u.display_name FROM emergencies e
                    JOIN users u ON e.user_id = u.id
-                   JOIN elder_family_link efl ON e.user_id = efl.elder_id
+                   JOIN user_bindings efl ON e.user_id = efl.elder_id
                    WHERE efl.family_id = ? ORDER BY e.created_at DESC LIMIT ?''',
                 (family_id, limit)).fetchall()
             db.close()
@@ -81,7 +81,7 @@ class Emergency:
             rows = db.execute(
                 '''SELECT e.*, u.display_name FROM emergencies e
                    JOIN users u ON e.user_id = u.id
-                   JOIN elder_family_link efl ON e.user_id = efl.elder_id
+                   JOIN user_bindings efl ON e.user_id = efl.elder_id
                    WHERE efl.family_id = ? AND e.status = 'pending'
                    ORDER BY e.created_at DESC''',
                 (family_id,)).fetchall()

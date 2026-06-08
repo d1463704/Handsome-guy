@@ -7,32 +7,29 @@ from flask import Flask
 
 
 def create_app():
-    """Flask App Factory — 建立並設定 Flask 應用程式"""
+    """Flask App Factory"""
     app = Flask(__name__,
                 instance_relative_config=True,
                 template_folder='templates',
                 static_folder='static')
 
-    # 設定 secret key（用於 session 與 flash message）
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     app.config['DATABASE'] = os.path.join(app.instance_path, 'database.db')
 
-    # 確保 instance 資料夾存在
     os.makedirs(app.instance_path, exist_ok=True)
 
-    # 初始化資料庫
     init_db(app)
 
-    # 註冊 Blueprint
     from app.routes.main import main_bp
     from app.routes.auth import auth_bp
     from app.routes.elder import elder_bp
     from app.routes.family import family_bp
 
+    # Blueprints already define url_prefix internally
     app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(elder_bp, url_prefix='/elder')
-    app.register_blueprint(family_bp, url_prefix='/family')
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(elder_bp)
+    app.register_blueprint(family_bp)
 
     return app
 

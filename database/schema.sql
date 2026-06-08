@@ -9,18 +9,29 @@ CREATE TABLE IF NOT EXISTS users (
     display_name TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('elder', 'family', 'nurse')),
     phone TEXT,
+    elder_code TEXT UNIQUE,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
 -- 長者-家屬綁定資料表
-CREATE TABLE IF NOT EXISTS elder_family_link (
+CREATE TABLE IF NOT EXISTS user_bindings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    family_id INTEGER NOT NULL,
+    elder_id INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (family_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (elder_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(family_id, elder_id)
+);
+
+-- mood_score: 1~5 分，NULL 表示未填寫
+CREATE TABLE IF NOT EXISTS status_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     elder_id INTEGER NOT NULL,
-    family_id INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-    FOREIGN KEY (elder_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (family_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE(elder_id, family_id)
+    type TEXT NOT NULL CHECK(type IN ('CHECKIN', 'SOS')),
+    mood_score INTEGER CHECK(mood_score BETWEEN 1 AND 5),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (elder_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
 -- 事項提醒資料表
@@ -34,6 +45,7 @@ CREATE TABLE IF NOT EXISTS reminders (
     repeat_type TEXT NOT NULL DEFAULT 'daily' CHECK(repeat_type IN ('daily', 'weekly', 'once')),
     status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed')),
     due_date TEXT,
+    is_active INTEGER DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (elder_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -61,4 +73,24 @@ CREATE TABLE IF NOT EXISTS emergencies (
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (resolved_by) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS reminder_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reminder_id INTEGER NOT NULL,
+    elder_id INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('completed', 'difficult')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (reminder_id) REFERENCES reminders (id) ON DELETE CASCADE,
+    FOREIGN KEY (elder_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reminder_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    log_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (log_id) REFERENCES reminder_logs (id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
 );

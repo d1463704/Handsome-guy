@@ -1,8 +1,52 @@
-"""認證路由 — 註冊/登入/登出"""
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash
-from app.models.user import User
+"""認證路由 — 註冊 / 登入 / 登出"""
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint
+from werkzeug.security import generate_password_hash, check_password_hash
+import random
+import string
+from app.models import user
 
 auth_bp = Blueprint('auth', __name__)
+
+
+@auth_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        display_name = request.form.get('display_name')
+        phone = request.form.get('phone')
+        role = request.form.get('role')
+
+        if not username or not password or not display_name or not role:
+            flash('請填寫所有必填欄位', 'danger')
+            return redirect(url_for('auth.register'))
+
+        existing_user = user.get_user_by_username(username)
+        if existing_user:
+            flash('此帳號已被使用，請選擇其他帳號', 'danger')
+            return redirect(url_for('auth.register'))
+
+        elder_code = None
+        if role == 'elder':
+            elder_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+        password_hash = generate_password_hash(password)
+        user_id = user.create({
+            'role': role,
+            'username': username,
+            'password_hash': password_hash,
+            'display_name': display_name,
+            'phone': phone,
+            'elder_code': elder_code
+        })
+
+        if user_id:
+            flash('註冊成功！請登入', 'success')
+            return redirect(url_for('auth.login'))
+        else:
+            flash('註冊失敗，請稍後再試', 'danger')
+
+    return render_template('auth/register.html')
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
@@ -16,14 +60,14 @@ def login():
             flash('請填寫帳號與密碼', 'error')
             return render_template('auth/login.html')
 
-        user = User.get_by_username(username)
-        if user and User.verify_password(user, password):
-            session['user_id'] = user['id']
-            session['role'] = user['role']
-            session['display_name'] = user['display_name']
-            flash(f'歡迎回來，{user["display_name"]}！', 'success')
+        u = user.get_user_by_username(username)
+        if u and check_password_hash(u['password_hash'], password):
+            session['user_id'] = u['id']
+            session['role'] = u['role']
+            session['display_name'] = u['display_name']
+            flash(f'歡迎回來，{u["display_name"]}！', 'success')
 
-            if user['role'] == 'elder':
+            if u['role'] == 'elder':
                 return redirect(url_for('elder.dashboard'))
             else:
                 return redirect(url_for('family.dashboard'))
@@ -31,45 +75,6 @@ def login():
             flash('帳號或密碼錯誤', 'error')
 
     return render_template('auth/login.html')
-
-
-@auth_bp.route('/register', methods=['GET', 'POST'])
-def register():
-    """註冊"""
-    if request.method == 'POST':
-        username = request.form.get('username', '').strip()
-        password = request.form.get('password', '')
-        confirm = request.form.get('confirm_password', '')
-        display_name = request.form.get('display_name', '').strip()
-        role = request.form.get('role', '')
-        phone = request.form.get('phone', '').strip() or None
-
-        # 驗證
-        if not all([username, password, display_name, role]):
-            flash('請填寫所有必填欄位', 'error')
-            return render_template('auth/register.html')
-
-        if password != confirm:
-            flash('兩次輸入的密碼不一致', 'error')
-            return render_template('auth/register.html')
-
-        if role not in ('elder', 'family', 'nurse'):
-            flash('請選擇正確的角色', 'error')
-            return render_template('auth/register.html')
-
-        if len(password) < 4:
-            flash('密碼至少需要 4 個字元', 'error')
-            return render_template('auth/register.html')
-
-        # 建立帳號
-        user_id = User.create(username, password, display_name, role, phone)
-        if user_id:
-            flash('註冊成功！請登入', 'success')
-            return redirect(url_for('auth.login'))
-        else:
-            flash('帳號已存在，請使用其他帳號', 'error')
-
-    return render_template('auth/register.html')
 
 
 @auth_bp.route('/logout')

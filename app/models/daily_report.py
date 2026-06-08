@@ -139,7 +139,7 @@ class DailyReport:
                 '''SELECT dr.*, u.display_name
                    FROM daily_reports dr
                    JOIN users u ON dr.user_id = u.id
-                   JOIN elder_family_link efl ON dr.user_id = efl.elder_id
+                   JOIN user_bindings efl ON dr.user_id = efl.elder_id
                    WHERE efl.family_id = ?
                    ORDER BY dr.reported_at DESC
                    LIMIT ?''',

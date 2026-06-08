@@ -8,18 +8,37 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        .elder-btn { font-size: 3rem; padding: 2rem; border-radius: 20px; width: 100%; margin-bottom: 20px; font-weight: bold; }
+        .sos-btn { background-color: #dc3545; color: white; border: none; }
+        .checkin-btn { background-color: #198754; color: white; border: none; }
+        .bg-gradient-primary { background: linear-gradient(135deg, #0d6efd, #0dcaf0); }
+        .mood-btn { font-size: 2.5rem; border-radius: 50%; width: 80px; height: 80px; padding: 0; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s; }
+        .mood-btn:hover { transform: scale(1.1); }
+        .mood-radio:checked + .mood-btn { border: 4px solid #0d6efd; transform: scale(1.1); background-color: #e9ecef; }
+        .mood-radio { display: none; }
+        .animate-pulse { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+    </style>
 </head>
-<body>
-    <!-- 導覽列 -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+<body class="bg-light d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-gradient-primary mb-4 shadow">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="{{ url_for('main.index') }}">
-                <i class="bi bi-house-heart-fill"></i> 生活管家
+            <a class="navbar-brand fs-3 fw-bold" href="{{ url_for('main.index') }}">
+                <i class="bi bi-house-heart-fill"></i> 獨居老人生活管家
             </a>
-            <div class="navbar-nav ms-auto">
-                {% if session.get('user_id') %}
-                    <span class="navbar-text text-white me-3">
-                        <i class="bi bi-person-circle"></i> {{ session.get('display_name', '使用者') }}
+            {% if session.get('user_id') %}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto align-items-center">
+                    <span class="navbar-text me-3 text-white fs-5 fw-bold">
+                        <i class="bi bi-person-circle"></i> 您好，{{ session.get('display_name') }}
                         {% if session.get('role') == 'elder' %}
                             <span class="badge bg-success">長者</span>
                         {% elif session.get('role') == 'family' %}
@@ -28,25 +47,26 @@
                             <span class="badge bg-warning text-dark">護工</span>
                         {% endif %}
                     </span>
-                    <a class="nav-link text-white" href="{{ url_for('auth.logout') }}">
-                        <i class="bi bi-box-arrow-right"></i> 登出
-                    </a>
-                {% else %}
-                    <a class="nav-link text-white" href="{{ url_for('auth.login') }}">登入</a>
-                    <a class="nav-link text-white" href="{{ url_for('auth.register') }}">註冊</a>
-                {% endif %}
+                    {% if session.get('role') in ['family', 'nurse'] %}
+                        <a href="{{ url_for('family.dashboard') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">狀態總覽</a>
+                        <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">提醒設定</a>
+                        <a href="{{ url_for('family.bind') }}" class="btn btn-outline-light btn-sm me-3 fw-bold">綁定長者</a>
+                    {% endif %}
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger fw-bold shadow-sm">登出</a>
+                </div>
             </div>
+            {% endif %}
         </div>
     </nav>
 
-    <!-- Flash Messages -->
-    <div class="container mt-3">
+    <div class="container pb-2">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    {% set bs_class = 'danger' if category == 'error' else category %}
+                    <div class="alert alert-{{ bs_class }} alert-dismissible fade show fs-5 shadow-sm rounded-4" role="alert">
+                        <strong>{{ message }}</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -54,13 +74,13 @@
     </div>
 
     <!-- 主要內容 -->
-    <main class="container mt-4 mb-5">
+    <main class="container mb-5 flex-grow-1">
         {% block content %}{% endblock %}
     </main>
 
     <!-- 頁尾 -->
-    <footer class="bg-light text-center text-muted py-3 mt-auto">
-        <p class="mb-0">&copy; 2026 獨居老人生活管家 — 老人與狗 第六組</p>
+    <footer class="bg-white text-center text-muted py-4 mt-auto border-top">
+        <p class="mb-0 fs-5">&copy; 2026 獨居老人生活管家 — 老人與狗 第六組</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

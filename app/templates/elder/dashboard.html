@@ -2,67 +2,12 @@
 {% block title %}主頁 — 獨居老人生活管家{% endblock %}
 
 {% block content %}
-<div class="text-center mt-3 mb-5">
-    <h2 class="fw-bold">您好，{{ session.get('display_name') }}</h2>
-    <p class="text-muted fs-5">今天感覺如何呢？</p>
-</div>
-
-<div class="row justify-content-center g-4 max-w-800 mx-auto">
-    <!-- 每日回報大按鈕 -->
-    <div class="col-12 col-md-6">
-        <form action="{{ url_for('elder.daily_report') }}" method="POST" class="h-100">
-            <input type="hidden" name="status" value="safe">
-            <button type="submit" class="btn {% if reported_today %}btn-success{% else %}btn-outline-success{% endif %} btn-elder-action w-100 h-100 shadow-sm" {% if reported_today %}disabled{% endif %}>
-                <div class="display-1 mb-3">
-                    {% if reported_today %}
-                        <i class="bi bi-check-circle-fill"></i>
-                    {% else %}
-                        <i class="bi bi-emoji-smile"></i>
-                    {% endif %}
-                </div>
-                <h1 class="fw-bold mb-0">
-                    {% if reported_today %}今日已回報{% else %}我很好{% endif %}
-                </h1>
-                {% if not reported_today %}
-                    <p class="mt-2 fs-5 mb-0">讓家人放心</p>
-                {% endif %}
-            </button>
-        </form>
-    </div>
-
-    <!-- 查看提醒大按鈕 -->
-    <div class="col-12 col-md-6">
-        <a href="{{ url_for('elder.reminders') }}" class="btn btn-outline-info btn-elder-action w-100 h-100 shadow-sm d-flex flex-column align-items-center justify-content-center text-decoration-none">
-            <div class="display-1 mb-3 position-relative">
-                <i class="bi bi-list-check"></i>
-                {% if pending_count > 0 %}
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 1.5rem;">
-                        {{ pending_count }}
-                    </span>
-                {% endif %}
-            </div>
-            <h1 class="fw-bold mb-0">看提醒</h1>
-            <p class="mt-2 fs-5 mb-0">吃藥、回診時間</p>
-        </a>
-    </div>
-
-    <!-- 緊急求助大按鈕 -->
-    <div class="col-12 mt-5">
-        <form action="{{ url_for('elder.emergency') }}" method="POST" onsubmit="return confirm('確定要發送緊急通知給家屬嗎？');">
-            <button type="submit" class="btn btn-danger btn-elder-emergency w-100 shadow">
-                <div class="display-1 mb-2"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                <h1 class="display-3 fw-bold mb-0">緊急求助</h1>
-                <p class="fs-4 mt-2 mb-0">通知家屬我需要幫忙</p>
-            </button>
-        </form>
-    </div>
-</div>
-{% block content %}
 <div class="text-center mb-5 mt-4">
-    <h1 class="display-3 fw-bold text-primary">您好，{{ user.display_name }}</h1>
+    <h1 class="display-2 fw-bold text-primary mb-3">您好，{{ user.display_name }}</h1>
+    <p class="display-6 text-muted">今天感覺如何呢？</p>
     {% if user.elder_code %}
-    <div class="d-inline-block bg-white p-3 rounded-4 shadow-sm mt-3">
-        <p class="fs-4 mb-0 text-muted">您的綁定碼：<strong class="text-dark fs-3">{{ user.elder_code }}</strong></p>
+    <div class="d-inline-block bg-white p-3 rounded-4 shadow-sm mt-3 border">
+        <p class="fs-4 mb-0 text-muted">您的綁定碼：<strong class="text-primary fs-2 ms-2">{{ user.elder_code }}</strong></p>
         <small class="text-secondary">(請將此碼給家屬以完成綁定)</small>
     </div>
     {% endif %}
@@ -71,13 +16,54 @@
 <div class="row mb-5 justify-content-center">
     <div class="col-md-8">
         {% if has_checked_in %}
-        <div class="alert alert-success text-center p-5 rounded-4 shadow border-0">
-            <h1 class="display-4 fw-bold mb-0">✅ 您今天已經平安打卡！</h1>
-        </div>
+            <div class="alert alert-success text-center p-5 rounded-4 shadow border-0">
+                <h1 class="display-4 fw-bold mb-4">✅ 您今天已經平安打卡！</h1>
+                {% if today_mood %}
+                <h3 class="text-secondary">
+                    今日心情：
+                    {% if today_mood == 1 %}😢 很不好
+                    {% elif today_mood == 2 %}😟 不太好
+                    {% elif today_mood == 3 %}😐 普通
+                    {% elif today_mood == 4 %}😊 不錯
+                    {% elif today_mood == 5 %}😄 很棒！
+                    {% endif %}
+                </h3>
+                {% endif %}
+            </div>
         {% else %}
-        <form action="{{ url_for('elder.checkin') }}" method="POST">
-            <button type="submit" class="btn elder-btn checkin-btn shadow-lg">我很好 (平安打卡)</button>
-        </form>
+            <div class="card shadow-lg border-0 rounded-4 p-4 text-center">
+                <h3 class="mb-4 fw-bold text-success">📝 請選擇您今天的心情，再按下平安打卡</h3>
+                <form action="{{ url_for('elder.checkin') }}" method="POST">
+                    <div class="d-flex justify-content-center gap-3 mb-5">
+                        <label>
+                            <input type="radio" name="mood_score" value="1" class="mood-radio" required>
+                            <div class="mood-btn btn btn-outline-danger">😢</div>
+                            <div class="mt-2 text-danger fw-bold fs-5">很不好</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="2" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-warning">😟</div>
+                            <div class="mt-2 text-warning fw-bold fs-5">不太好</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="3" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-secondary">😐</div>
+                            <div class="mt-2 text-secondary fw-bold fs-5">普通</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="4" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-info">😊</div>
+                            <div class="mt-2 text-info fw-bold fs-5">不錯</div>
+                        </label>
+                        <label>
+                            <input type="radio" name="mood_score" value="5" class="mood-radio">
+                            <div class="mood-btn btn btn-outline-success">😄</div>
+                            <div class="mt-2 text-success fw-bold fs-5">很棒！</div>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn elder-btn checkin-btn shadow-lg">我很好 (平安打卡)</button>
+                </form>
+            </div>
         {% endif %}
     </div>
 </div>
@@ -85,30 +71,249 @@
 <div class="row mb-5 justify-content-center">
     <div class="col-md-8">
         <form action="{{ url_for('elder.sos') }}" method="POST" onsubmit="return confirm('確定要發送緊急求助嗎？聯絡人將會收到通知！');">
-            <button type="submit" class="btn elder-btn sos-btn shadow-lg">SOS 緊急求助</button>
+            <button type="submit" class="btn elder-btn sos-btn shadow-lg animate-pulse">
+                🆘 SOS 緊急求助
+            </button>
         </form>
     </div>
 </div>
 
+<div id="reminders-section-wrapper">
 {% if reminders %}
-<div class="row justify-content-center">
+<div class="row justify-content-center mt-5">
     <div class="col-md-8">
-        <div class="card shadow-lg border-warning rounded-4 overflow-hidden">
-            <div class="card-header bg-warning text-dark text-center py-4 border-0">
-                <h2 class="mb-0 fw-bold">⭐ 今日重要提醒 ⭐</h2>
+        <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
+            <div class="card-header bg-white text-dark text-center py-4 border-0">
+                <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
             </div>
-            <ul class="list-group list-group-flush">
-                {% for r in reminders %}
-                <li class="list-group-item p-4 border-bottom">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="display-6 fw-bold">{{ r.title }}</span>
-                        <span class="display-6 text-primary fw-bold bg-light px-3 py-1 rounded-3">{{ r.remind_time }}</span>
-                    </div>
-                </li>
-                {% endfor %}
+            <ul class="list-group list-group-flush" id="reminders-list">
+                <!-- 由 JavaScript 負責動態渲染，確保初次與輪詢一致 -->
             </ul>
         </div>
     </div>
 </div>
 {% endif %}
+</div>
+
+<!-- Toast Container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="reminder-toast" class="toast align-items-center text-white bg-primary border-0 rounded-4 shadow-lg animate-fade-in" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
+        <div class="d-flex">
+            <div class="toast-body fs-4 p-3 d-flex align-items-center">
+                <i class="bi bi-bell-fill me-3 text-warning animate-bounce fs-3"></i>
+                <span id="toast-message">家屬為您新增了新的提醒！</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white m-auto me-3 fs-5" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 儲存已知的提醒事項，用於比對
+    let knownRemindersStr = "";
+
+    function checkNewReminders() {
+        fetch("{{ url_for('elder.api_reminders') }}")
+            .then(res => {
+                if (res.status === 401 || res.redirected) return;
+                return res.json();
+            })
+            .then(data => {
+                if (!data || !data.reminders) return;
+
+                const currentReminders = data.reminders;
+                const currentStr = JSON.stringify(currentReminders);
+
+                // 如果資料有任何變動（數量、狀態、留言），就更新 DOM
+                if (knownRemindersStr !== currentStr) {
+                    // 如果有新的提醒 ID，顯示 Toast 通知
+                    if (knownRemindersStr !== "") {
+                        const oldIds = JSON.parse(knownRemindersStr).map(r => r.id);
+                        const newReminders = currentReminders.filter(r => !oldIds.includes(r.id));
+                        if (newReminders.length > 0) {
+                            showToast(newReminders);
+                        }
+                    }
+                    knownRemindersStr = currentStr;
+                    updateRemindersDOM(currentReminders);
+                }
+            })
+            .catch(err => console.error("Error fetching reminders:", err));
+    }
+
+    function showToast(newReminders) {
+        const toastMessage = document.getElementById('toast-message');
+        if (newReminders.length === 1) {
+            toastMessage.textContent = `🔔 新增提醒：${newReminders[0].title} (${newReminders[0].remind_time})`;
+        } else {
+            toastMessage.textContent = `🔔 新增了 ${newReminders.length} 項新的提醒事項！`;
+        }
+        const toastEl = document.getElementById('reminder-toast');
+        new bootstrap.Toast(toastEl).show();
+    }
+
+    function replyReminder(reminderId, status) {
+        fetch(`/elder/api/reminders/${reminderId}/reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                checkNewReminders(); // 立即重新抓取資料
+            } else {
+                alert("回覆失敗，請再試一次。");
+            }
+        });
+    }
+
+    function postComment(logId, reminderId) {
+        const input = document.getElementById(`comment-input-${reminderId}`);
+        const message = input.value.trim();
+        if (!message) return;
+
+        fetch(`/elder/api/logs/${logId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                input.value = '';
+                checkNewReminders(); // 立即更新
+            }
+        });
+    }
+
+    function updateRemindersDOM(reminders) {
+        const wrapper = document.getElementById('reminders-section-wrapper');
+        if (!wrapper) return;
+
+        if (reminders.length === 0) {
+            wrapper.innerHTML = '';
+            return;
+        }
+
+        // 檢查如果沒有 card 結構，就補上（因為可能被清空過）
+        if (!document.getElementById('reminders-list')) {
+            wrapper.innerHTML = `
+                <div class="row justify-content-center mt-5 animate-fade-in">
+                    <div class="col-md-8">
+                        <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
+                            <div class="card-header bg-white text-dark text-center py-4 border-0">
+                                <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
+                            </div>
+                            <ul class="list-group list-group-flush" id="reminders-list"></ul>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        const list = document.getElementById('reminders-list');
+        let html = '';
+
+        reminders.forEach(r => {
+            html += `<li class="list-group-item p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="display-6 fw-bold text-dark">${escapeHtml(r.title)}</span>
+                    <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
+                        <i class="bi bi-clock-history"></i> ${escapeHtml(r.remind_time)}
+                    </span>
+                </div>`;
+
+            if (!r.log) {
+                // 尚未回覆
+                html += `
+                <div class="d-flex gap-3 justify-content-end mt-3">
+                    <button onclick="replyReminder(${r.id}, 'difficult')" class="btn btn-outline-danger btn-lg rounded-pill fw-bold px-4 shadow-sm">
+                        <i class="bi bi-x-circle-fill me-2"></i>有困難
+                    </button>
+                    <button onclick="replyReminder(${r.id}, 'completed')" class="btn btn-success btn-lg rounded-pill fw-bold px-4 shadow-sm">
+                        <i class="bi bi-check-circle-fill me-2"></i>已完成
+                    </button>
+                </div>`;
+            } else {
+                // 已回覆，顯示狀態與討論串
+                const statusBadge = r.log.status === 'completed' 
+                    ? `<span class="badge bg-success fs-5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> 已完成</span>`
+                    : `<span class="badge bg-danger fs-5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> 有困難</span>`;
+
+                html += `
+                <div class="bg-light rounded-4 p-3 mt-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <span class="text-muted fw-bold">執行狀態：${statusBadge}</span>
+                    </div>
+                    
+                    <div class="comments-section mb-3" style="max-height: 250px; overflow-y: auto;">`;
+                
+                if (r.log.comments && r.log.comments.length > 0) {
+                    r.log.comments.forEach(c => {
+                        const isSelf = c.role === 'elder';
+                        const alignClass = isSelf ? 'text-end' : 'text-start';
+                        const bgClass = isSelf ? 'bg-primary text-white' : 'bg-white border text-dark';
+                        const name = isSelf ? '您' : escapeHtml(c.display_name);
+
+                        html += `
+                        <div class="mb-2 ${alignClass}">
+                            <div class="small text-muted mb-1">${name} • ${c.time_str}</div>
+                            <div class="d-inline-block px-3 py-2 rounded-4 shadow-sm fs-5 ${bgClass}" style="max-width: 80%;">
+                                ${escapeHtml(c.message)}
+                            </div>
+                        </div>`;
+                    });
+                } else {
+                    html += `<div class="text-center text-muted py-2"><small>尚無留言</small></div>`;
+                }
+
+                html += `
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <input type="text" id="comment-input-${r.id}" class="form-control form-control-lg rounded-pill border-0 shadow-sm" placeholder="寫點什麼回覆家屬...">
+                        <button onclick="postComment(${r.log.id}, ${r.id})" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }
+            html += `</li>`;
+        });
+
+        list.innerHTML = html;
+        
+        // 將討論串滾動到最底
+        document.querySelectorAll('.comments-section').forEach(el => {
+            el.scrollTop = el.scrollHeight;
+        });
+    }
+
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    window.addEventListener('load', () => {
+        checkNewReminders(); // 載入時先抓一次並渲染
+        setInterval(checkNewReminders, 5000);
+    });
+</script>
+
+<style>
+    .animate-bounce {
+        animation: bounce 1s infinite;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
