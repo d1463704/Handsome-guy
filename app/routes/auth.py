@@ -5,7 +5,7 @@ import random
 import string
 from app.models import user
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+auth_bp = Blueprint('auth', __name__)
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
@@ -51,28 +51,35 @@ def register():
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
+    """登入"""
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        if not username or not password:
+            flash('請填寫帳號與密碼', 'error')
+            return render_template('auth/login.html')
 
         u = user.get_user_by_username(username)
         if u and check_password_hash(u['password_hash'], password):
             session['user_id'] = u['id']
             session['role'] = u['role']
             session['display_name'] = u['display_name']
+            flash(f'歡迎回來，{u["display_name"]}！', 'success')
 
             if u['role'] == 'elder':
                 return redirect(url_for('elder.dashboard'))
             else:
                 return redirect(url_for('family.dashboard'))
         else:
-            flash('帳號或密碼錯誤', 'danger')
+            flash('帳號或密碼錯誤', 'error')
 
     return render_template('auth/login.html')
 
 
 @auth_bp.route('/logout')
 def logout():
+    """登出"""
     session.clear()
-    flash('您已成功登出', 'success')
-    return redirect(url_for('auth.login'))
+    flash('已成功登出', 'success')
+    return redirect(url_for('main.index'))

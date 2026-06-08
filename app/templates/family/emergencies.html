@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}緊急通報 — 獨居老人生活管家{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold"><i class="bi bi-exclamation-octagon-fill text-danger"></i> 緊急通報紀錄</h2>
+    <a href="{{ url_for('family.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> 回儀表板
+    </a>
+</div>
+
+<div class="row g-4">
+    {% for emergency in emergencies %}
+    <div class="col-12">
+        <div class="card shadow-sm {% if emergency.status == 'pending' %}border-danger border-2{% else %}border-0{% endif %}">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <div class="d-flex align-items-center mb-2">
+                        <h4 class="fw-bold mb-0 me-3 text-primary">{{ emergency.display_name }}</h4>
+                        <span class="badge bg-secondary"><i class="bi bi-clock"></i> 通報時間：{{ emergency.created_at }}</span>
+                    </div>
+                    <p class="fs-5 mb-0 text-danger fw-bold"><i class="bi bi-chat-left-dots"></i> 訊息：{{ emergency.message or '緊急求助' }}</p>
+                    {% if emergency.status == 'resolved' %}
+                        <small class="text-muted mt-2 d-block"><i class="bi bi-check2"></i> 處理時間：{{ emergency.resolved_at }}</small>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    {% if emergency.status == 'pending' %}
+                    <form action="{{ url_for('family.resolve_emergency', eid=emergency.id) }}" method="POST" onsubmit="return confirm('確認已聯絡並處理此緊急事件嗎？');">
+                        <button type="submit" class="btn btn-danger btn-lg animate-pulse shadow">
+                            <i class="bi bi-check-lg"></i> 標記為已處理
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="badge bg-success fs-6 px-3 py-2"><i class="bi bi-check-circle-fill"></i> 處理完畢</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <div class="display-1 text-success mb-3"><i class="bi bi-shield-check"></i></div>
+        <h3 class="fw-bold text-success">太好了，目前沒有任何緊急通報！</h3>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

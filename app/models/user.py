@@ -16,8 +16,7 @@ def create(data):
             "INSERT INTO users (role, username, password_hash, display_name, phone, elder_code) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (data.get('role'), data.get('username'), data.get('password_hash'),
-             data.get('display_name'), data.get('phone'), data.get('elder_code'))
-        )
+             data.get('display_name'), data.get('phone'), data.get('elder_code')))
         conn.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
@@ -57,8 +56,7 @@ def update(user_id, data):
     try:
         conn.execute(
             "UPDATE users SET display_name = ?, phone = ? WHERE id = ?",
-            (data.get('display_name'), data.get('phone'), user_id)
-        )
+            (data.get('display_name'), data.get('phone'), user_id))
         conn.commit()
         return True
     except sqlite3.Error as e:
@@ -115,8 +113,7 @@ def bind_elder_to_family(family_id, elder_id):
     try:
         cursor.execute(
             "INSERT INTO user_bindings (family_id, elder_id) VALUES (?, ?)",
-            (family_id, elder_id)
-        )
+            (family_id, elder_id))
         conn.commit()
         return True
     except sqlite3.IntegrityError:
@@ -134,8 +131,7 @@ def get_bound_elders(family_id):
     try:
         return conn.execute(
             "SELECT u.* FROM users u JOIN user_bindings b ON u.id = b.elder_id WHERE b.family_id = ?",
-            (family_id,)
-        ).fetchall()
+            (family_id,)).fetchall()
     except sqlite3.Error as e:
         print(f"Database error in user.get_bound_elders: {e}")
         return []

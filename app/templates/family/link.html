@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}綁定長者 — 獨居老人生活管家{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm mt-4">
+            <div class="card-body p-5">
+                <h3 class="text-center fw-bold mb-4">
+                    <i class="bi bi-person-plus-fill text-primary"></i> 綁定長者帳號
+                </h3>
+                <p class="text-muted text-center mb-4">請輸入長者的「登入帳號」建立綁定關係，綁定後即可開始接收回報與設定提醒。</p>
+                
+                <form action="{{ url_for('family.link_elder') }}" method="POST">
+                    <div class="mb-4">
+                        <label for="elder_username" class="form-label fw-bold">長者帳號</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="elder_username" name="elder_username" placeholder="請輸入長者的帳號名稱" required autofocus>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg fw-bold">確認綁定</button>
+                        <a href="{{ url_for('family.dashboard') }}" class="btn btn-light btn-lg text-muted">取消返回</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

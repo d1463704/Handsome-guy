@@ -34,6 +34,19 @@ def create_app():
     return app
 
 
+def get_db(app=None):
+    """取得資料庫連線"""
+    if app is None:
+        from flask import current_app
+        app = current_app
+
+    db_path = app.config['DATABASE']
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
+
+
 def init_db(app):
     """初始化資料庫（執行 schema.sql 建表）"""
     db_path = app.config['DATABASE']

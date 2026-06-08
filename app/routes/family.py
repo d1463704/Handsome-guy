@@ -1,8 +1,23 @@
 """家屬路由 — 儀表板 / 綁定長者 / 管理提醒"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from app.models import user, status, reminder, reminder_log
+from functools import wraps
 
-family_bp = Blueprint('family', __name__, url_prefix='/family')
+family_bp = Blueprint('family', __name__)
+
+
+def family_required(f):
+    """裝飾器：確認使用者已登入且角色為家屬或護工"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('請先登入', 'error')
+            return redirect(url_for('auth.login'))
+        if session.get('role') not in ('family', 'nurse'):
+            flash('此頁面僅供家屬或護工使用', 'error')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated
 
 
 @family_bp.before_request
@@ -14,6 +29,7 @@ def require_family_login():
 
 @family_bp.route('/dashboard')
 def dashboard():
+    """家屬儀表板"""
     family_id = session['user_id']
     elders = user.get_bound_elders(family_id)
 
@@ -87,6 +103,7 @@ def bind():
 
 @family_bp.route('/reminders', methods=['GET', 'POST'])
 def reminders():
+    """提醒列表"""
     family_id = session['user_id']
     elders = user.get_bound_elders(family_id)
 
@@ -137,5 +154,5 @@ def delete_reminder(reminder_id):
     if success:
         flash('提醒事項已刪除', 'success')
     else:
-        flash('刪除失敗', 'danger')
+        flash('刪除失敗', 'error')
     return redirect(url_for('family.reminders'))

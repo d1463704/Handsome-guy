@@ -12,8 +12,7 @@ def create(data):
     try:
         cursor.execute(
             "INSERT INTO reminders (elder_id, created_by, title, remind_time, is_active) VALUES (?, ?, ?, ?, 1)",
-            (data.get('elder_id'), data.get('created_by'), data.get('title'), data.get('remind_time'))
-        )
+            (data.get('elder_id'), data.get('created_by'), data.get('title'), data.get('remind_time')))
         conn.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
@@ -53,8 +52,7 @@ def update(reminder_id, data):
     try:
         conn.execute(
             "UPDATE reminders SET title = ?, remind_time = ?, is_active = ? WHERE id = ?",
-            (data.get('title'), data.get('remind_time'), data.get('is_active', 1), reminder_id)
-        )
+            (data.get('title'), data.get('remind_time'), data.get('is_active', 1), reminder_id))
         conn.commit()
         return True
     except sqlite3.Error as e:

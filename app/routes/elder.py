@@ -1,8 +1,23 @@
 """長者路由 — 平安打卡（含心情評分）/ 緊急求助 / 查看提醒"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint, jsonify
 from app.models import status, reminder, user, reminder_log
+from functools import wraps
 
-elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
+elder_bp = Blueprint('elder', __name__)
+
+
+def elder_required(f):
+    """裝飾器：確認使用者已登入且角色為長者"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('請先登入', 'error')
+            return redirect(url_for('auth.login'))
+        if session.get('role') != 'elder':
+            flash('此頁面僅供長者使用', 'error')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated
 
 
 @elder_bp.before_request
@@ -17,6 +32,7 @@ def require_elder_login():
 
 @elder_bp.route('/dashboard')
 def dashboard():
+    """長者主頁 — 大按鈕介面"""
     user_id = session['user_id']
     u = user.get_by_id(user_id)
 
@@ -60,7 +76,7 @@ def checkin():
         mood_labels = {1: '😢 很不好', 2: '😟 不太好', 3: '😐 普通', 4: '😊 不錯', 5: '😄 很棒！'}
         flash(f'平安打卡成功！今日心情：{mood_labels.get(mood_score, "")}', 'success')
     else:
-        flash('打卡失敗，請再試一次', 'danger')
+        flash('打卡失敗，請稍後再試', 'error')
     return redirect(url_for('elder.dashboard'))
 
 
@@ -75,7 +91,7 @@ def sos():
     if record_id:
         flash('🚨 緊急求助已送出！已通知聯絡人！', 'danger')
     else:
-        flash('求助發送失敗，請直接撥打電話！', 'danger')
+        flash('通報失敗，請稍後再試', 'error')
     return redirect(url_for('elder.dashboard'))
 
 
@@ -108,11 +124,11 @@ def api_reminder_reply(reminder_id):
         return jsonify({'error': 'Unauthorized'}), 401
 
     data = request.get_json()
-    status = data.get('status')
-    if status not in ('completed', 'difficult'):
+    reply_status = data.get('status')
+    if reply_status not in ('completed', 'difficult'):
         return jsonify({'error': 'Invalid status'}), 400
 
-    log_id = reminder_log.log_reply(reminder_id, user_id, status)
+    log_id = reminder_log.log_reply(reminder_id, user_id, reply_status)
     if log_id:
         return jsonify({'success': True, 'log_id': log_id})
     else:

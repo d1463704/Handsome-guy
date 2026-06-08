@@ -1,3 +1,4 @@
+# Routes 模組初始化
 from .auth import auth_bp
 from .elder import elder_bp
 from .family import family_bp
