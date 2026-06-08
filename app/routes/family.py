@@ -1,6 +1,6 @@
 """家屬路由 — 儀表板 / 綁定長者 / 管理提醒"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
-from app.models import user, status, reminder
+from app.models import user, status, reminder, reminder_log
 
 family_bp = Blueprint('family', __name__, url_prefix='/family')
 
@@ -23,14 +23,43 @@ def dashboard():
         checkin_today = status.get_today_checkin(elder['id'])
         has_checkin_today = checkin_today is not None
         today_mood = checkin_today['mood_score'] if checkin_today else None
+        
+        # 取得今日提醒事項與回覆狀態
+        elder_reminders = reminder.get_reminders_by_elder(elder['id'], active_only=True)
+        logs_with_comments = reminder_log.get_today_logs_with_comments_by_elder(elder['id'])
+        reminders_with_status = []
+        for r in elder_reminders:
+            r_dict = dict(r)
+            r_dict['log'] = logs_with_comments.get(r['id'])
+            reminders_with_status.append(r_dict)
+
         elder_status.append({
             'elder': elder,
             'recent_records': recent_records,
             'has_checkin_today': has_checkin_today,
             'today_mood': today_mood,
+            'reminders_with_status': reminders_with_status
         })
 
     return render_template('family/dashboard.html', elder_status=elder_status)
+
+@family_bp.route('/api/logs/<int:log_id>/comment', methods=['POST'])
+def api_reminder_comment(log_id):
+    family_id = session.get('user_id')
+    if not family_id or session.get('role') not in ('family', 'nurse'):
+        return {"error": "Unauthorized"}, 401
+        
+    message = request.form.get('message', '').strip()
+    if not message:
+        return {"error": "Message is empty"}, 400
+        
+    comment_id = reminder_log.add_comment(log_id, family_id, message)
+    if comment_id:
+        flash('留言成功', 'success')
+    else:
+        flash('留言失敗', 'danger')
+        
+    return redirect(url_for('family.dashboard'))
 
 
 @family_bp.route('/bind', methods=['GET', 'POST'])

@@ -40,3 +40,23 @@ CREATE TABLE IF NOT EXISTS reminders (
     FOREIGN KEY (elder_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS reminder_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    reminder_id INTEGER NOT NULL,
+    elder_id INTEGER NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('completed', 'difficult')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (reminder_id) REFERENCES reminders (id) ON DELETE CASCADE,
+    FOREIGN KEY (elder_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS reminder_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    log_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (log_id) REFERENCES reminder_logs (id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users (id) ON DELETE CASCADE
+);

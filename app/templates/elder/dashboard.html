@@ -86,17 +86,8 @@
             <div class="card-header bg-white text-dark text-center py-4 border-0">
                 <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
             </div>
-            <ul class="list-group list-group-flush">
-                {% for r in reminders %}
-                <li class="list-group-item p-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="display-6 fw-bold text-dark">{{ r.title }}</span>
-                        <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
-                            <i class="bi bi-clock-history"></i> {{ r.remind_time }}
-                        </span>
-                    </div>
-                </li>
-                {% endfor %}
+            <ul class="list-group list-group-flush" id="reminders-list">
+                <!-- 由 JavaScript 負責動態渲染，確保初次與輪詢一致 -->
             </ul>
         </div>
     </div>
@@ -118,57 +109,78 @@
 </div>
 
 <script>
-    // 儲存已知的提醒事項 ID 列表
-    let knownReminderIds = null;
+    // 儲存已知的提醒事項，用於比對
+    let knownRemindersStr = "";
 
     function checkNewReminders() {
         fetch("{{ url_for('elder.api_reminders') }}")
             .then(res => {
-                if (res.status === 401 || res.redirected) {
-                    // 若未授權或被重新導向（如 session 過期），則不處理
-                    return;
-                }
+                if (res.status === 401 || res.redirected) return;
                 return res.json();
             })
             .then(data => {
                 if (!data || !data.reminders) return;
 
                 const currentReminders = data.reminders;
-                const currentIds = currentReminders.map(r => r.id);
+                const currentStr = JSON.stringify(currentReminders);
 
-                if (knownReminderIds === null) {
-                    // 首次載入頁面，僅記錄目前的提醒 ID，不顯示通知
-                    knownReminderIds = currentIds;
-                    return;
-                }
-
-                // 篩選出新加入的提醒事項（ID 不在原本 knownReminderIds 中的項目）
-                const newReminders = currentReminders.filter(r => !knownReminderIds.includes(r.id));
-
-                if (newReminders.length > 0) {
-                    knownReminderIds = currentIds;
-
-                    // 1. 設定並顯示 Toast 通知長者
-                    const toastMessage = document.getElementById('toast-message');
-                    if (newReminders.length === 1) {
-                        toastMessage.textContent = `🔔 新增提醒：${newReminders[0].title} (${newReminders[0].remind_time})`;
-                    } else {
-                        toastMessage.textContent = `🔔 新增了 ${newReminders.length} 項新的提醒事項！`;
+                // 如果資料有任何變動（數量、狀態、留言），就更新 DOM
+                if (knownRemindersStr !== currentStr) {
+                    // 如果有新的提醒 ID，顯示 Toast 通知
+                    if (knownRemindersStr !== "") {
+                        const oldIds = JSON.parse(knownRemindersStr).map(r => r.id);
+                        const newReminders = currentReminders.filter(r => !oldIds.includes(r.id));
+                        if (newReminders.length > 0) {
+                            showToast(newReminders);
+                        }
                     }
-                    
-                    const toastEl = document.getElementById('reminder-toast');
-                    const toast = new bootstrap.Toast(toastEl);
-                    toast.show();
-
-                    // 2. 動態更新主畫面提醒列表的 DOM 結構
-                    updateRemindersDOM(currentReminders);
-                } else if (currentIds.length !== knownReminderIds.length || !currentIds.every((val, index) => val === knownReminderIds[index])) {
-                    // 如果提醒項目數量不同，或是順序有變更（如某些提醒被家屬刪除或修改），也同步更新 DOM
-                    knownReminderIds = currentIds;
+                    knownRemindersStr = currentStr;
                     updateRemindersDOM(currentReminders);
                 }
             })
             .catch(err => console.error("Error fetching reminders:", err));
+    }
+
+    function showToast(newReminders) {
+        const toastMessage = document.getElementById('toast-message');
+        if (newReminders.length === 1) {
+            toastMessage.textContent = `🔔 新增提醒：${newReminders[0].title} (${newReminders[0].remind_time})`;
+        } else {
+            toastMessage.textContent = `🔔 新增了 ${newReminders.length} 項新的提醒事項！`;
+        }
+        const toastEl = document.getElementById('reminder-toast');
+        new bootstrap.Toast(toastEl).show();
+    }
+
+    function replyReminder(reminderId, status) {
+        fetch(`/elder/api/reminders/${reminderId}/reply`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                checkNewReminders(); // 立即重新抓取資料
+            } else {
+                alert("回覆失敗，請再試一次。");
+            }
+        });
+    }
+
+    function postComment(logId, reminderId) {
+        const input = document.getElementById(`comment-input-${reminderId}`);
+        const message = input.value.trim();
+        if (!message) return;
+
+        fetch(`/elder/api/logs/${logId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        }).then(res => res.json()).then(data => {
+            if (data.success) {
+                input.value = '';
+                checkNewReminders(); // 立即更新
+            }
+        });
     }
 
     function updateRemindersDOM(reminders) {
@@ -180,37 +192,97 @@
             return;
         }
 
-        let html = `
-            <div class="row justify-content-center mt-5 animate-fade-in">
-                <div class="col-md-8">
-                    <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
-                        <div class="card-header bg-white text-dark text-center py-4 border-0">
-                            <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
+        // 檢查如果沒有 card 結構，就補上（因為可能被清空過）
+        if (!document.getElementById('reminders-list')) {
+            wrapper.innerHTML = `
+                <div class="row justify-content-center mt-5 animate-fade-in">
+                    <div class="col-md-8">
+                        <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
+                            <div class="card-header bg-white text-dark text-center py-4 border-0">
+                                <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
+                            </div>
+                            <ul class="list-group list-group-flush" id="reminders-list"></ul>
                         </div>
-                        <ul class="list-group list-group-flush">
-        `;
+                    </div>
+                </div>`;
+        }
+
+        const list = document.getElementById('reminders-list');
+        let html = '';
 
         reminders.forEach(r => {
-            html += `
-                <li class="list-group-item p-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="display-6 fw-bold text-dark">${escapeHtml(r.title)}</span>
-                        <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
-                            <i class="bi bi-clock-history"></i> ${escapeHtml(r.remind_time)}
-                        </span>
+            html += `<li class="list-group-item p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="display-6 fw-bold text-dark">${escapeHtml(r.title)}</span>
+                    <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
+                        <i class="bi bi-clock-history"></i> ${escapeHtml(r.remind_time)}
+                    </span>
+                </div>`;
+
+            if (!r.log) {
+                // 尚未回覆
+                html += `
+                <div class="d-flex gap-3 justify-content-end mt-3">
+                    <button onclick="replyReminder(${r.id}, 'difficult')" class="btn btn-outline-danger btn-lg rounded-pill fw-bold px-4 shadow-sm">
+                        <i class="bi bi-x-circle-fill me-2"></i>有困難
+                    </button>
+                    <button onclick="replyReminder(${r.id}, 'completed')" class="btn btn-success btn-lg rounded-pill fw-bold px-4 shadow-sm">
+                        <i class="bi bi-check-circle-fill me-2"></i>已完成
+                    </button>
+                </div>`;
+            } else {
+                // 已回覆，顯示狀態與討論串
+                const statusBadge = r.log.status === 'completed' 
+                    ? `<span class="badge bg-success fs-5 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i> 已完成</span>`
+                    : `<span class="badge bg-danger fs-5 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i> 有困難</span>`;
+
+                html += `
+                <div class="bg-light rounded-4 p-3 mt-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <span class="text-muted fw-bold">執行狀態：${statusBadge}</span>
                     </div>
-                </li>
-            `;
+                    
+                    <div class="comments-section mb-3" style="max-height: 250px; overflow-y: auto;">`;
+                
+                if (r.log.comments && r.log.comments.length > 0) {
+                    r.log.comments.forEach(c => {
+                        const isSelf = c.role === 'elder';
+                        const alignClass = isSelf ? 'text-end' : 'text-start';
+                        const bgClass = isSelf ? 'bg-primary text-white' : 'bg-white border text-dark';
+                        const name = isSelf ? '您' : escapeHtml(c.display_name);
+
+                        html += `
+                        <div class="mb-2 ${alignClass}">
+                            <div class="small text-muted mb-1">${name} • ${c.time_str}</div>
+                            <div class="d-inline-block px-3 py-2 rounded-4 shadow-sm fs-5 ${bgClass}" style="max-width: 80%;">
+                                ${escapeHtml(c.message)}
+                            </div>
+                        </div>`;
+                    });
+                } else {
+                    html += `<div class="text-center text-muted py-2"><small>尚無留言</small></div>`;
+                }
+
+                html += `
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <input type="text" id="comment-input-${r.id}" class="form-control form-control-lg rounded-pill border-0 shadow-sm" placeholder="寫點什麼回覆家屬...">
+                        <button onclick="postComment(${r.log.id}, ${r.id})" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                            <i class="bi bi-send-fill"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }
+            html += `</li>`;
         });
 
-        html += `
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        wrapper.innerHTML = html;
+        list.innerHTML = html;
+        
+        // 將討論串滾動到最底
+        document.querySelectorAll('.comments-section').forEach(el => {
+            el.scrollTop = el.scrollHeight;
+        });
     }
 
     function escapeHtml(str) {
@@ -222,9 +294,8 @@
             .replace(/'/g, "&#039;");
     }
 
-    // 確保在頁面與 Bootstrap JS 完全載入後再啟動輪詢
     window.addEventListener('load', () => {
-        // 每 5 秒檢查一次新提醒
+        checkNewReminders(); // 載入時先抓一次並渲染
         setInterval(checkNewReminders, 5000);
     });
 </script>

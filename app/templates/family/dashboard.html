@@ -70,6 +70,65 @@
                         {% endfor %}
                     </ul>
                 </div>
+
+                <h5 class="text-muted fw-bold mb-3 mt-4"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
+                <div class="bg-light rounded-4 p-2 border">
+                    <ul class="list-group list-group-flush rounded-3">
+                        {% for r in es.reminders_with_status %}
+                        <li class="list-group-item bg-transparent py-3 border-bottom-0">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fs-5 fw-bold text-dark">{{ r.title }} ({{ r.remind_time }})</span>
+                                {% if r.log %}
+                                    {% if r.log.status == 'completed' %}
+                                    <span class="badge bg-success fs-6 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>已完成</span>
+                                    {% else %}
+                                    <span class="badge bg-danger fs-6 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i>有困難</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary fs-6 rounded-pill">尚未回覆</span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if r.log %}
+                            <!-- 討論串區域 -->
+                            <div class="border rounded-3 p-3 bg-white mt-2">
+                                <div class="comments-list mb-3" style="max-height: 200px; overflow-y: auto;">
+                                    {% if r.log.comments %}
+                                        {% for c in r.log.comments %}
+                                        <div class="mb-2 {{ 'text-end' if c.role == 'family' else 'text-start' }}">
+                                            <div class="small text-muted mb-1">{{ '您' if c.role == 'family' else c.display_name }} • {{ c.time_str }}</div>
+                                            <div class="d-inline-block px-3 py-2 rounded-3 shadow-sm {{ 'bg-primary text-white' if c.role == 'family' else 'bg-light border text-dark' }}" style="max-width: 85%;">
+                                                {{ c.message }}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="text-center text-muted small py-2">尚無留言</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <form action="{{ url_for('family.api_reminder_comment', log_id=r.log.id) }}" method="POST">
+                                    <div class="d-flex gap-2 flex-wrap mb-2">
+                                        <button type="submit" name="message" value="👍 你很棒！" class="btn btn-sm btn-outline-primary rounded-pill">👍 你很棒！</button>
+                                        <button type="submit" name="message" value="❤️ 辛苦了！" class="btn btn-sm btn-outline-danger rounded-pill">❤️ 辛苦了！</button>
+                                        <button type="submit" name="message" value="❓ 需要幫忙嗎？" class="btn btn-sm btn-outline-warning rounded-pill">❓ 需要幫忙嗎？</button>
+                                        <button type="submit" name="message" value="🏃 我晚點過去看你" class="btn btn-sm btn-outline-info rounded-pill">🏃 晚點過去看你</button>
+                                    </div>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="message" class="form-control rounded-start-pill" placeholder="自訂留言...">
+                                        <button class="btn btn-primary rounded-end-pill px-3" type="submit"><i class="bi bi-send-fill"></i></button>
+                                    </div>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </li>
+                        {% else %}
+                        <li class="list-group-item bg-transparent text-center text-muted py-4 border-bottom-0">
+                            <i class="bi bi-clock-history fs-3 d-block mb-2"></i>今日尚無提醒事項
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
             </div>
             <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0">
                 <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2">
