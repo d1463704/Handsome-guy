@@ -1,5 +1,5 @@
 """長者路由 — 平安打卡（含心情評分）/ 緊急求助 / 查看提醒"""
-from flask import render_template, request, redirect, url_for, flash, session, Blueprint
+from flask import render_template, request, redirect, url_for, flash, session, Blueprint, jsonify
 from app.models import status, reminder, user
 
 elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
@@ -8,6 +8,9 @@ elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
 @elder_bp.before_request
 def require_elder_login():
     if 'user_id' not in session or session.get('role') != 'elder':
+        # 如果是 API 請求，回傳 JSON 格式的 401 錯誤，避免重定向 HTML
+        if request.path.startswith('/elder/api/'):
+            return jsonify({'error': 'Unauthorized'}), 401
         flash('請先以長者身分登入', 'warning')
         return redirect(url_for('auth.login'))
 
@@ -72,3 +75,22 @@ def sos():
     else:
         flash('求助發送失敗，請直接撥打電話！', 'danger')
     return redirect(url_for('elder.dashboard'))
+
+
+@elder_bp.route('/api/reminders')
+def api_reminders():
+    """API：取得長者今日的未完成提醒事項"""
+    user_id = session.get('user_id')
+    # 這裡的權限已由 before_request 預先驗證過，安全起見再做一次檢查
+    if not user_id or session.get('role') != 'elder':
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    reminder_list = reminder.get_reminders_by_elder(user_id, active_only=True)
+    result = []
+    for r in reminder_list:
+        result.append({
+            'id': r['id'],
+            'title': r['title'],
+            'remind_time': r['remind_time']
+        })
+    return jsonify({'reminders': result})

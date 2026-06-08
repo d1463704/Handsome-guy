@@ -78,6 +78,7 @@
     </div>
 </div>
 
+<div id="reminders-section-wrapper">
 {% if reminders %}
 <div class="row justify-content-center mt-5">
     <div class="col-md-8">
@@ -101,4 +102,147 @@
     </div>
 </div>
 {% endif %}
+</div>
+
+<!-- Toast Container -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+    <div id="reminder-toast" class="toast align-items-center text-white bg-primary border-0 rounded-4 shadow-lg animate-fade-in" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
+        <div class="d-flex">
+            <div class="toast-body fs-4 p-3 d-flex align-items-center">
+                <i class="bi bi-bell-fill me-3 text-warning animate-bounce fs-3"></i>
+                <span id="toast-message">家屬為您新增了新的提醒！</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white m-auto me-3 fs-5" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 儲存已知的提醒事項 ID 列表
+    let knownReminderIds = null;
+
+    function checkNewReminders() {
+        fetch("{{ url_for('elder.api_reminders') }}")
+            .then(res => {
+                if (res.status === 401 || res.redirected) {
+                    // 若未授權或被重新導向（如 session 過期），則不處理
+                    return;
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (!data || !data.reminders) return;
+
+                const currentReminders = data.reminders;
+                const currentIds = currentReminders.map(r => r.id);
+
+                if (knownReminderIds === null) {
+                    // 首次載入頁面，僅記錄目前的提醒 ID，不顯示通知
+                    knownReminderIds = currentIds;
+                    return;
+                }
+
+                // 篩選出新加入的提醒事項（ID 不在原本 knownReminderIds 中的項目）
+                const newReminders = currentReminders.filter(r => !knownReminderIds.includes(r.id));
+
+                if (newReminders.length > 0) {
+                    knownReminderIds = currentIds;
+
+                    // 1. 設定並顯示 Toast 通知長者
+                    const toastMessage = document.getElementById('toast-message');
+                    if (newReminders.length === 1) {
+                        toastMessage.textContent = `🔔 新增提醒：${newReminders[0].title} (${newReminders[0].remind_time})`;
+                    } else {
+                        toastMessage.textContent = `🔔 新增了 ${newReminders.length} 項新的提醒事項！`;
+                    }
+                    
+                    const toastEl = document.getElementById('reminder-toast');
+                    const toast = new bootstrap.Toast(toastEl);
+                    toast.show();
+
+                    // 2. 動態更新主畫面提醒列表的 DOM 結構
+                    updateRemindersDOM(currentReminders);
+                } else if (currentIds.length !== knownReminderIds.length || !currentIds.every((val, index) => val === knownReminderIds[index])) {
+                    // 如果提醒項目數量不同，或是順序有變更（如某些提醒被家屬刪除或修改），也同步更新 DOM
+                    knownReminderIds = currentIds;
+                    updateRemindersDOM(currentReminders);
+                }
+            })
+            .catch(err => console.error("Error fetching reminders:", err));
+    }
+
+    function updateRemindersDOM(reminders) {
+        const wrapper = document.getElementById('reminders-section-wrapper');
+        if (!wrapper) return;
+
+        if (reminders.length === 0) {
+            wrapper.innerHTML = '';
+            return;
+        }
+
+        let html = `
+            <div class="row justify-content-center mt-5 animate-fade-in">
+                <div class="col-md-8">
+                    <div class="card shadow-lg border-0 border-top border-warning border-5 rounded-4 overflow-hidden">
+                        <div class="card-header bg-white text-dark text-center py-4 border-0">
+                            <h2 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning"></i> 今日重要提醒</h2>
+                        </div>
+                        <ul class="list-group list-group-flush">
+        `;
+
+        reminders.forEach(r => {
+            html += `
+                <li class="list-group-item p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="display-6 fw-bold text-dark">${escapeHtml(r.title)}</span>
+                        <span class="display-5 text-primary fw-bold bg-light px-4 py-2 rounded-4 shadow-sm">
+                            <i class="bi bi-clock-history"></i> ${escapeHtml(r.remind_time)}
+                        </span>
+                    </div>
+                </li>
+            `;
+        });
+
+        html += `
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        wrapper.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    // 確保在頁面與 Bootstrap JS 完全載入後再啟動輪詢
+    window.addEventListener('load', () => {
+        // 每 5 秒檢查一次新提醒
+        setInterval(checkNewReminders, 5000);
+    });
+</script>
+
+<style>
+    .animate-bounce {
+        animation: bounce 1s infinite;
+    }
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-6px); }
+    }
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 {% endblock %}
