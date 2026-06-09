@@ -5,7 +5,7 @@ import random
 import string
 from app.models import user
 
-auth_bp = Blueprint('auth', __name__)
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
