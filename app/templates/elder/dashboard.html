@@ -32,16 +32,15 @@
     </div>
 </div>
 
-{% if reminders %}
-<div class="row justify-content-center">
+<div class="row justify-content-center" id="reminders-section" style="{% if not reminders %}display: none;{% endif %}">
     <div class="col-md-8">
         <div class="card shadow-lg border-warning rounded-4 overflow-hidden">
             <div class="card-header bg-warning text-dark text-center py-4 border-0">
                 <h2 class="mb-0 fw-bold">⭐ 今日重要提醒 ⭐</h2>
             </div>
-            <ul class="list-group list-group-flush">
+            <ul class="list-group list-group-flush" id="reminders-list">
                 {% for r in reminders %}
-                <li class="list-group-item p-4 border-bottom">
+                <li class="list-group-item p-4 border-bottom" data-id="{{ r.id }}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="display-6 fw-bold">{{ r.title }}</span>
                         <span class="display-6 text-primary fw-bold bg-light px-3 py-1 rounded-3">{{ r.remind_time }}</span>
@@ -52,5 +51,145 @@
         </div>
     </div>
 </div>
-{% endif %}
+
+<script>
+    // 儲存當前網頁已載入的提醒事項 ID
+    let currentReminderIds = [
+        {% for r in reminders %}
+        {{ r.id }},
+        {% endfor %}
+    ];
+
+    function checkReminders() {
+        fetch("{{ url_for('elder.get_reminders_api') }}")
+            .then(response => {
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+                return response.json();
+            })
+            .then(data => {
+                const reminders = data.reminders || [];
+                const section = document.getElementById('reminders-section');
+                const list = document.getElementById('reminders-list');
+
+                if (reminders.length === 0) {
+                    section.style.display = 'none';
+                    list.innerHTML = '';
+                    currentReminderIds = [];
+                    return;
+                }
+
+                // 檢查是否有新的提醒 ID
+                let hasNew = false;
+                const newIds = reminders.map(r => r.id);
+                for (const r of reminders) {
+                    if (!currentReminderIds.includes(r.id)) {
+                        hasNew = true;
+                        break;
+                    }
+                }
+
+                // 更新當前 ID 清單
+                currentReminderIds = newIds;
+
+                // 重新渲染清單內容
+                list.innerHTML = '';
+                reminders.forEach(r => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item p-4 border-bottom';
+                    li.setAttribute('data-id', r.id);
+                    li.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="display-6 fw-bold">${escapeHtml(r.title)}</span>
+                            <span class="display-6 text-primary fw-bold bg-light px-3 py-1 rounded-3">${escapeHtml(r.remind_time)}</span>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+
+                section.style.display = 'block';
+
+                // 如果有新訊息，播放嗶嗶聲並顯示大字體頂部通知
+                if (hasNew) {
+                    playNotificationSound();
+                    showToastNotification();
+                }
+            })
+            .catch(err => console.error("輪詢提醒事項失敗:", err));
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, "&amp;")
+                  .replace(/</g, "&lt;")
+                  .replace(/>/g, "&gt;")
+                  .replace(/"/g, "&quot;")
+                  .replace(/'/g, "&#039;");
+    }
+
+    function playNotificationSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // 聲音 1: 523.25Hz (C5)，播放 0.3 秒
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+            osc1.frequency.value = 523.25;
+            osc1.type = 'sine';
+            
+            gain1.gain.setValueAtTime(0, audioCtx.currentTime);
+            gain1.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+            gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            
+            osc1.start(audioCtx.currentTime);
+            osc1.stop(audioCtx.currentTime + 0.3);
+
+            // 聲音 2: 659.25Hz (E5)，延遲 0.2 秒播放 0.3 秒
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.frequency.value = 659.25;
+                osc2.type = 'sine';
+
+                gain2.gain.setValueAtTime(0, audioCtx.currentTime);
+                gain2.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+                osc2.start(audioCtx.currentTime);
+                osc2.stop(audioCtx.currentTime + 0.3);
+            }, 200);
+        } catch (e) {
+            console.log("播放通知音效失敗:", e);
+        }
+    }
+
+    function showToastNotification() {
+        // 找到 container 容器，在其頂部插入一個醒目的 Alert
+        const container = document.querySelector('.container');
+        if (!container) return;
+
+        // 移除之前已經存在的新通知 Alert，避免重複堆疊
+        const oldAlert = document.getElementById('new-reminder-alert');
+        if (oldAlert) {
+            oldAlert.remove();
+        }
+
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'new-reminder-alert';
+        alertDiv.className = 'alert alert-warning alert-dismissible fade show fs-2 fw-bold text-center shadow-lg border-warning p-4 mt-2 mb-4';
+        alertDiv.role = 'alert';
+        alertDiv.innerHTML = `
+            🔔 收到新的事項提醒囉！請查看下方重要提醒。
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="padding: 1.5rem;"></button>
+        `;
+        
+        // 插入在第一個子節點之前
+        container.insertBefore(alertDiv, container.firstChild);
+    }
+
+    // 每 8 秒輪詢一次
+    setInterval(checkReminders, 8000);
+</script>
 {% endblock %}

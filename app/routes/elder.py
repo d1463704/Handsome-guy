@@ -52,3 +52,24 @@ def sos():
     else:
         flash('求助發送失敗，請直接撥打電話！', 'danger')
     return redirect(url_for('elder.dashboard'))
+
+@elder_bp.route('/api/reminders')
+def get_reminders_api():
+    user_id = session.get('user_id')
+    if not user_id:
+        return {'error': 'Unauthorized'}, 401
+    
+    # 取得今日提醒事項
+    reminders = reminder.get_reminders_by_elder(user_id, active_only=True)
+    
+    # 轉換成 JSON
+    reminders_list = []
+    for r in reminders:
+        reminders_list.append({
+            'id': r['id'],
+            'title': r['title'],
+            'remind_time': r['remind_time']
+        })
+        
+    return {'reminders': reminders_list}
+
