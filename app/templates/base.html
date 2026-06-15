@@ -50,6 +50,8 @@
                     {% if session.get('role') in ['family', 'nurse'] %}
                         <a href="{{ url_for('family.dashboard') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">狀態總覽</a>
                         <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">提醒設定</a>
+                        <a href="{{ url_for('family.emergencies') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">緊急通報</a>
+                        <a href="{{ url_for('family.reports') }}" class="btn btn-outline-light btn-sm me-2 fw-bold">回報紀錄</a>
                         <a href="{{ url_for('family.bind') }}" class="btn btn-outline-light btn-sm me-3 fw-bold">綁定長者</a>
                     {% endif %}
                     <a href="{{ url_for('auth.logout') }}" class="btn btn-danger fw-bold shadow-sm">登出</a>

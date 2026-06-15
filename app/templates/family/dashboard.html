@@ -17,6 +17,23 @@
     <a href="{{ url_for('family.bind') }}" class="btn btn-info text-white btn-lg rounded-pill px-5 fw-bold fs-4 shadow">立即綁定</a>
 </div>
 {% else %}
+
+{% if has_unreported_elders %}
+<div class="alert alert-danger border-danger border-2 shadow rounded-4 p-4 mb-4 d-flex align-items-center" role="alert" style="animation: pulse 2s infinite;">
+    <div class="me-3 fs-1"><i class="bi bi-exclamation-triangle-fill text-danger"></i></div>
+    <div>
+        <h4 class="alert-heading fw-bold mb-1">⚠️ 有長者今日尚未回報平安！</h4>
+        <p class="mb-0 fs-5">以下長者今天還沒有進行平安打卡，請留意他們的狀況並主動關心。</p>
+        <div class="mt-2">
+            {% for es in elder_status %}
+                {% if not es.has_checkin_today %}
+                    <span class="badge bg-danger fs-6 me-2 px-3 py-2 rounded-pill"><i class="bi bi-person-fill me-1"></i>{{ es.elder.display_name }}</span>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 <div class="row g-4" id="elders-container">
     {% for es in elder_status %}
     <div class="col-xl-6 mb-4">
@@ -72,6 +89,24 @@
                 </div>
 
                 <h5 class="text-muted fw-bold mb-3"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
+                {% if es.total_count > 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted fs-6">完成進度</span>
+                        <span class="fw-bold fs-6 {% if es.completed_count == es.total_count %}text-success{% elif es.completed_count > 0 %}text-warning{% else %}text-secondary{% endif %}">
+                            {{ es.completed_count }} / {{ es.total_count }} 項
+                        </span>
+                    </div>
+                    {% set pct = (es.completed_count / es.total_count * 100) | int if es.total_count > 0 else 0 %}
+                    <div class="progress rounded-pill" style="height: 12px;">
+                        <div class="progress-bar {% if es.completed_count == es.total_count %}bg-success{% elif es.completed_count > 0 %}bg-warning{% else %}bg-secondary{% endif %} rounded-pill" 
+                             role="progressbar" 
+                             style="width: {{ pct }}%;" 
+                             aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 <div class="bg-light rounded-4 p-2 border">
                     <ul class="list-group list-group-flush rounded-3">
                         {% for r in es.reminders_with_status %}
@@ -131,9 +166,20 @@
                 </div>
             </div>
             <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0">
-                <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2">
-                    <i class="bi bi-bell-fill me-2"></i>管理提醒事項
-                </a>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{{ url_for('family.reminders') }}" class="btn btn-outline-primary flex-fill fw-bold rounded-pill py-2">
+                        <i class="bi bi-bell-fill me-1"></i>管理提醒
+                    </a>
+                    <a href="{{ url_for('family.emergencies') }}" class="btn btn-outline-danger flex-fill fw-bold rounded-pill py-2">
+                        <i class="bi bi-exclamation-octagon-fill me-1"></i>緊急通報
+                        {% if es.pending_sos_count > 0 %}
+                            <span class="badge bg-danger rounded-pill ms-1">{{ es.pending_sos_count }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ url_for('family.reports') }}" class="btn btn-outline-success flex-fill fw-bold rounded-pill py-2">
+                        <i class="bi bi-journal-check me-1"></i>回報紀錄
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -405,6 +451,23 @@
                         </div>
 
                         <h5 class="text-muted fw-bold mb-3"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
+                        ${es.total_count > 0 ? `
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="text-muted fs-6">完成進度</span>
+                                <span class="fw-bold fs-6 ${es.completed_count === es.total_count ? 'text-success' : es.completed_count > 0 ? 'text-warning' : 'text-secondary'}">
+                                    ${es.completed_count} / ${es.total_count} 項
+                                </span>
+                            </div>
+                            <div class="progress rounded-pill" style="height: 12px;">
+                                <div class="progress-bar ${es.completed_count === es.total_count ? 'bg-success' : es.completed_count > 0 ? 'bg-warning' : 'bg-secondary'} rounded-pill" 
+                                     role="progressbar" 
+                                     style="width: ${es.total_count > 0 ? Math.round(es.completed_count / es.total_count * 100) : 0}%;" 
+                                     aria-valuenow="${es.total_count > 0 ? Math.round(es.completed_count / es.total_count * 100) : 0}" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
                         <div class="bg-light rounded-4 p-2 border">
                             <ul class="list-group list-group-flush rounded-3">
                                 ${remindersHtml}
@@ -412,9 +475,18 @@
                         </div>
                     </div>
                     <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0">
-                        <a href="/family/reminders" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2">
-                            <i class="bi bi-bell-fill me-2"></i>管理提醒事項
-                        </a>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="/family/reminders" class="btn btn-outline-primary flex-fill fw-bold rounded-pill py-2">
+                                <i class="bi bi-bell-fill me-1"></i>管理提醒
+                            </a>
+                            <a href="/family/emergencies" class="btn btn-outline-danger flex-fill fw-bold rounded-pill py-2">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>緊急通報
+                                ${es.pending_sos_count > 0 ? `<span class="badge bg-danger rounded-pill ms-1">${es.pending_sos_count}</span>` : ''}
+                            </a>
+                            <a href="/family/reports" class="btn btn-outline-success flex-fill fw-bold rounded-pill py-2">
+                                <i class="bi bi-journal-check me-1"></i>回報紀錄
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>`;

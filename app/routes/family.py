@@ -1,6 +1,8 @@
 """家屬路由 — 儀表板 / 綁定長者 / 管理提醒"""
 from flask import render_template, request, redirect, url_for, flash, session, Blueprint
 from app.models import user, status, reminder, reminder_log
+from app.models.emergency import Emergency
+from app.models.daily_report import DailyReport
 from functools import wraps
 
 family_bp = Blueprint('family', __name__, url_prefix='/family')
@@ -34,30 +36,47 @@ def dashboard():
     elders = user.get_bound_elders(family_id)
 
     elder_status = []
+    has_unreported_elders = False
     for elder in elders:
         recent_records = status.get_records_by_elder(elder['id'], limit=5)
         checkin_today = status.get_today_checkin(elder['id'])
         has_checkin_today = checkin_today is not None
         today_mood = checkin_today['mood_score'] if checkin_today else None
-        
+
+        if not has_checkin_today:
+            has_unreported_elders = True
+
         # 取得今日提醒事項與回覆狀態
         elder_reminders = reminder.get_reminders_by_elder(elder['id'], active_only=True)
         logs_with_comments = reminder_log.get_today_logs_with_comments_by_elder(elder['id'])
         reminders_with_status = []
+        completed_count = 0
+        total_count = len(elder_reminders)
         for r in elder_reminders:
             r_dict = dict(r)
             r_dict['log'] = logs_with_comments.get(r['id'])
+            if r_dict['log'] and r_dict['log']['status'] == 'completed':
+                completed_count += 1
             reminders_with_status.append(r_dict)
+
+        # 取得未處理的緊急通報數量
+        pending_emergencies = Emergency.get_pending_by_family(family_id)
+        elder_pending_sos = [e for e in pending_emergencies if e['user_id'] == elder['id']]
 
         elder_status.append({
             'elder': elder,
             'recent_records': recent_records,
             'has_checkin_today': has_checkin_today,
             'today_mood': today_mood,
-            'reminders_with_status': reminders_with_status
+            'reminders_with_status': reminders_with_status,
+            'completed_count': completed_count,
+            'total_count': total_count,
+            'pending_sos_count': len(elder_pending_sos)
         })
 
-    return render_template('family/dashboard.html', elder_status=elder_status)
+    return render_template('family/dashboard.html',
+                           elder_status=elder_status,
+                           has_unreported_elders=has_unreported_elders)
 
 @family_bp.route('/api/dashboard_data')
 def api_dashboard_data():
@@ -78,10 +97,18 @@ def api_dashboard_data():
         elder_reminders = reminder.get_reminders_by_elder(elder_id, active_only=True)
         logs_with_comments = reminder_log.get_today_logs_with_comments_by_elder(elder_id)
         reminders_with_status = []
+        completed_count = 0
+        total_count = len(elder_reminders)
         for r in elder_reminders:
             r_dict = dict(r)
             r_dict['log'] = logs_with_comments.get(r['id'])
+            if r_dict['log'] and r_dict['log']['status'] == 'completed':
+                completed_count += 1
             reminders_with_status.append(r_dict)
+
+        # 取得未處理的緊急通報數量
+        pending_emergencies = Emergency.get_pending_by_family(family_id)
+        elder_pending_sos = [e for e in pending_emergencies if e['user_id'] == elder_id]
 
         elder_status.append({
             'elder': {
@@ -92,7 +119,10 @@ def api_dashboard_data():
             'recent_records': [dict(rr) for rr in recent_records],
             'has_checkin_today': has_checkin_today,
             'today_mood': today_mood,
-            'reminders_with_status': reminders_with_status
+            'reminders_with_status': reminders_with_status,
+            'completed_count': completed_count,
+            'total_count': total_count,
+            'pending_sos_count': len(elder_pending_sos)
         })
         
     return {"elder_status": elder_status}
@@ -206,3 +236,31 @@ def delete_reminder(reminder_id):
     else:
         flash('刪除失敗', 'error')
     return redirect(url_for('family.reminders'))
+
+
+@family_bp.route('/emergencies')
+def emergencies():
+    """緊急通報歷史紀錄"""
+    family_id = session['user_id']
+    emergency_list = Emergency.get_by_family(family_id)
+    return render_template('family/emergencies.html', emergencies=emergency_list)
+
+
+@family_bp.route('/emergencies/<int:eid>/resolve', methods=['POST'])
+def resolve_emergency(eid):
+    """標記緊急通報為已處理"""
+    family_id = session['user_id']
+    success = Emergency.resolve(eid, resolved_by=family_id)
+    if success:
+        flash('已標記為處理完畢', 'success')
+    else:
+        flash('處理失敗，請稍後再試', 'danger')
+    return redirect(url_for('family.emergencies'))
+
+
+@family_bp.route('/reports')
+def reports():
+    """長者每日回報歷史紀錄"""
+    family_id = session['user_id']
+    report_list = DailyReport.get_by_family(family_id)
+    return render_template('family/reports.html', reports=report_list)
