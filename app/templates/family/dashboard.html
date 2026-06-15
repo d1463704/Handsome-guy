@@ -17,7 +17,7 @@
     <a href="{{ url_for('family.bind') }}" class="btn btn-info text-white btn-lg rounded-pill px-5 fw-bold fs-4 shadow">立即綁定</a>
 </div>
 {% else %}
-<div class="row g-4">
+<div class="row g-4" id="elders-container">
     {% for es in elder_status %}
     <div class="col-xl-6 mb-4">
         <div class="card shadow border-0 h-100 rounded-4 overflow-hidden">
@@ -50,7 +50,7 @@
                 <p class="text-muted mb-4 fs-5"><i class="bi bi-telephone-fill me-2"></i>聯絡電話：{{ es.elder.phone or '未提供' }}</p>
                 
                 <h5 class="text-muted fw-bold mb-3"><i class="bi bi-activity me-2"></i>最近動態</h5>
-                <div class="bg-light rounded-4 p-2 border">
+                <div class="bg-light rounded-4 p-2 border mb-4">
                     <ul class="list-group list-group-flush rounded-3">
                         {% for r in es.recent_records %}
                         <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-3 border-bottom-0">
@@ -71,7 +71,7 @@
                     </ul>
                 </div>
 
-                <h5 class="text-muted fw-bold mb-3 mt-4"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
+                <h5 class="text-muted fw-bold mb-3"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
                 <div class="bg-light rounded-4 p-2 border">
                     <ul class="list-group list-group-flush rounded-3">
                         {% for r in es.reminders_with_status %}
@@ -92,7 +92,7 @@
                             {% if r.log %}
                             <!-- 討論串區域 -->
                             <div class="border rounded-3 p-3 bg-white mt-2">
-                                <div class="comments-list mb-3" style="max-height: 200px; overflow-y: auto;">
+                                <div class="comments-list mb-3" id="comments-list-{{ r.log.id }}" style="max-height: 200px; overflow-y: auto;">
                                     {% if r.log.comments %}
                                         {% for c in r.log.comments %}
                                         <div class="mb-2 {{ 'text-end' if c.role == 'family' else 'text-start' }}">
@@ -107,15 +107,15 @@
                                     {% endif %}
                                 </div>
                                 
-                                <form action="{{ url_for('family.api_reminder_comment', log_id=r.log.id) }}" method="POST">
+                                <form onsubmit="postFamilyComment(event, {{ r.log.id }}, {{ r.id }})">
                                     <div class="d-flex gap-2 flex-wrap mb-2">
-                                        <button type="submit" name="message" value="👍 你很棒！" class="btn btn-sm btn-outline-primary rounded-pill">👍 你很棒！</button>
-                                        <button type="submit" name="message" value="❤️ 辛苦了！" class="btn btn-sm btn-outline-danger rounded-pill">❤️ 辛苦了！</button>
-                                        <button type="submit" name="message" value="❓ 需要幫忙嗎？" class="btn btn-sm btn-outline-warning rounded-pill">❓ 需要幫忙嗎？</button>
-                                        <button type="submit" name="message" value="🏃 我晚點過去看你" class="btn btn-sm btn-outline-info rounded-pill">🏃 晚點過去看你</button>
+                                        <button type="button" onclick="postFamilyCommentPreset({{ r.log.id }}, {{ r.id }}, '👍 你很棒！')" class="btn btn-sm btn-outline-primary rounded-pill">👍 你很棒！</button>
+                                        <button type="button" onclick="postFamilyCommentPreset({{ r.log.id }}, {{ r.id }}, '❤️ 辛苦了！')" class="btn btn-sm btn-outline-danger rounded-pill">❤️ 辛苦了！</button>
+                                        <button type="button" onclick="postFamilyCommentPreset({{ r.log.id }}, {{ r.id }}, '❓ 需要幫忙嗎？')" class="btn btn-sm btn-outline-warning rounded-pill">❓ 需要幫忙嗎？</button>
+                                        <button type="button" onclick="postFamilyCommentPreset({{ r.log.id }}, {{ r.id }}, '🏃 我晚點過去看你')" class="btn btn-sm btn-outline-info rounded-pill">🏃 晚點過去看你</button>
                                     </div>
                                     <div class="input-group input-group-sm">
-                                        <input type="text" name="message" class="form-control rounded-start-pill" placeholder="自訂留言...">
+                                        <input type="text" id="comment-input-{{ r.id }}" name="message" class="form-control rounded-start-pill" placeholder="自訂留言..." onkeydown="if(event.key === 'Enter') { event.preventDefault(); postFamilyComment(event, {{ r.log.id }}, {{ r.id }}); }">
                                         <button class="btn btn-primary rounded-end-pill px-3" type="submit"><i class="bi bi-send-fill"></i></button>
                                     </div>
                                 </form>
@@ -139,5 +139,371 @@
     </div>
     {% endfor %}
 </div>
+
+<!-- SOS Alert Overlay -->
+<div id="sos-alert-overlay" class="d-none" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(220, 53, 69, 0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; animation: flash-red 1.2s infinite alternate;">
+    <div class="text-center p-5 rounded-4 shadow-lg" style="background: rgba(0,0,0,0.65); max-width: 600px; width: 90%;">
+        <div class="display-1 mb-4">🚨 🚨 🚨</div>
+        <h1 class="display-4 fw-bold mb-3" id="sos-alert-title">緊急求助！</h1>
+        <p class="fs-3 mb-5" id="sos-alert-message">長者正在發送緊急求助，請立即聯絡！</p>
+        <button onclick="dismissSOS()" class="btn btn-light btn-lg rounded-pill fw-bold px-5 py-3 fs-3 text-danger shadow-lg">
+            <i class="bi bi-telephone-fill me-2"></i>我已收到並聯絡
+        </button>
+    </div>
+</div>
+
+<script>
+    let knownDashboardDataStr = "";
+    let currentActiveSOSId = null;
+    let alarmInterval = null;
+    let audioCtx = null;
+
+    function getMoodEmoji(score) {
+        const moodLabels = {1: '😢 很不好', 2: '😟 不太好', 3: '😐 普通', 4: '😊 不錯', 5: '😄 很棒！'};
+        return moodLabels[score] || '';
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function startAlarmSound() {
+        if (alarmInterval) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            alarmInterval = setInterval(() => {
+                try {
+                    if (audioCtx.state === 'suspended') {
+                        audioCtx.resume();
+                    }
+                    let osc = audioCtx.createOscillator();
+                    let gain = audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(988, audioCtx.currentTime); // B5 note
+                    gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.2);
+                } catch (e) {
+                    console.error("Audio playback error:", e);
+                }
+            }, 500);
+        } catch (err) {
+            console.error("Failed to initialize AudioContext:", err);
+        }
+    }
+
+    function stopAlarmSound() {
+        if (alarmInterval) {
+            clearInterval(alarmInterval);
+            alarmInterval = null;
+        }
+        if (audioCtx) {
+            try {
+                audioCtx.close();
+            } catch(e){}
+            audioCtx = null;
+        }
+    }
+
+    function triggerSOS(sosData) {
+        currentActiveSOSId = sosData.recordId;
+        document.getElementById('sos-alert-title').textContent = `🚨 ${sosData.elderName} 緊急求助！`;
+        document.getElementById('sos-alert-message').textContent = `發送時間：${sosData.time}。請立刻聯絡長者！`;
+        const overlay = document.getElementById('sos-alert-overlay');
+        overlay.classList.remove('d-none');
+        overlay.style.setProperty('display', 'flex', 'important');
+        startAlarmSound();
+    }
+
+    function dismissSOS() {
+        if (currentActiveSOSId) {
+            let dismissedIds = JSON.parse(localStorage.getItem('dismissed_sos_ids') || '[]');
+            if (!dismissedIds.includes(currentActiveSOSId)) {
+                dismissedIds.push(currentActiveSOSId);
+                localStorage.setItem('dismissed_sos_ids', JSON.stringify(dismissedIds));
+            }
+        }
+        document.getElementById('sos-alert-overlay').classList.add('d-none');
+        document.getElementById('sos-alert-overlay').style.setProperty('display', 'none', 'important');
+        stopAlarmSound();
+    }
+
+    function postFamilyComment(event, logId, reminderId) {
+        if (event) event.preventDefault();
+        const input = document.getElementById(`comment-input-${reminderId}`);
+        const message = input.value.trim();
+        if (!message) return;
+        
+        sendCommentToServer(logId, message, () => {
+            input.value = '';
+            pollDashboardData();
+        });
+    }
+
+    function postFamilyCommentPreset(logId, reminderId, message) {
+        sendCommentToServer(logId, message, () => {
+            pollDashboardData();
+        });
+    }
+
+    function sendCommentToServer(logId, message, callback) {
+        fetch(`/family/api/logs/${logId}/comment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: message })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                if (callback) callback();
+            } else {
+                alert("傳送留言失敗：" + (data.error || "未知錯誤"));
+            }
+        })
+        .catch(err => {
+            console.error("Error sending comment:", err);
+            alert("留言失敗，請檢查網路連線。");
+        });
+    }
+
+    function updateFamilyDashboardDOM(elderStatusList) {
+        // 紀錄目前焦點與輸入的內容，避免更新時遺失焦點與已輸入資料
+        const activeId = document.activeElement ? document.activeElement.id : null;
+        const activeVal = activeId && activeId.startsWith('comment-input-') ? document.activeElement.value : '';
+        const activeSelectionStart = activeId && activeId.startsWith('comment-input-') ? document.activeElement.selectionStart : null;
+        const activeSelectionEnd = activeId && activeId.startsWith('comment-input-') ? document.activeElement.selectionEnd : null;
+
+        const container = document.getElementById('elders-container');
+        if (!container) return;
+
+        let html = '';
+        elderStatusList.forEach(es => {
+            const checkinBadge = es.has_checkin_today
+                ? `<span class="badge bg-success bg-opacity-10 text-success border border-success fs-5 rounded-pill px-3 py-2 shadow-sm">
+                      <i class="bi bi-check-circle-fill me-1"></i>今日已平安
+                   </span>
+                   ${es.today_mood ? `
+                   <span class="badge bg-light text-dark border fs-5 rounded-pill px-3 py-2 ms-2 shadow-sm">
+                      心情：${getMoodEmoji(es.today_mood)}
+                   </span>` : ''}`
+                : `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger fs-5 rounded-pill px-3 py-2 shadow-sm animate-pulse">
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>今日尚未打卡
+                   </span>`;
+
+            let recentRecordsHtml = '';
+            if (es.recent_records && es.recent_records.length > 0) {
+                es.recent_records.forEach(r => {
+                    const recordType = r.type === 'SOS'
+                        ? `<strong class="text-danger"><i class="bi bi-exclamation-octagon-fill me-2"></i>緊急求助</strong>`
+                        : `<strong class="text-success"><i class="bi bi-shield-check me-2"></i>平安打卡</strong>`;
+                    recentRecordsHtml += `
+                    <li class="list-group-item bg-transparent d-flex justify-content-between align-items-center py-3 border-bottom-0">
+                        <span class="fs-5">${recordType}</span>
+                        <span class="text-muted"><i class="bi bi-clock me-1"></i>${escapeHtml(r.created_at)}</span>
+                    </li>`;
+                });
+            } else {
+                recentRecordsHtml = `
+                <li class="list-group-item bg-transparent text-center text-muted py-4 border-bottom-0">
+                    <i class="bi bi-inbox fs-3 d-block mb-2"></i>尚無任何紀錄
+                </li>`;
+            }
+
+            let remindersHtml = '';
+            if (es.reminders_with_status && es.reminders_with_status.length > 0) {
+                es.reminders_with_status.forEach(r => {
+                    const statusBadge = r.log
+                        ? (r.log.status === 'completed'
+                            ? `<span class="badge bg-success fs-6 rounded-pill"><i class="bi bi-check-circle-fill me-1"></i>已完成</span>`
+                            : `<span class="badge bg-danger fs-6 rounded-pill"><i class="bi bi-x-circle-fill me-1"></i>有困難</span>`)
+                        : `<span class="badge bg-secondary fs-6 rounded-pill">尚未回覆</span>`;
+
+                    let commentsHtml = '';
+                    if (r.log) {
+                        let commentsListHtml = '';
+                        if (r.log.comments && r.log.comments.length > 0) {
+                            r.log.comments.forEach(c => {
+                                const isSelf = c.role === 'family';
+                                const alignClass = isSelf ? 'text-end' : 'text-start';
+                                const bgClass = isSelf ? 'bg-primary text-white' : 'bg-light border text-dark';
+                                const name = isSelf ? '您' : escapeHtml(c.display_name);
+                                commentsListHtml += `
+                                <div class="mb-2 ${alignClass}">
+                                    <div class="small text-muted mb-1">${name} • ${c.time_str}</div>
+                                    <div class="d-inline-block px-3 py-2 rounded-3 shadow-sm ${bgClass}" style="max-width: 85%;">
+                                        ${escapeHtml(c.message)}
+                                    </div>
+                                </div>`;
+                            });
+                        } else {
+                            commentsListHtml = `<div class="text-center text-muted small py-2">尚無留言</div>`;
+                        }
+
+                        commentsHtml = `
+                        <!-- 討論串區域 -->
+                        <div class="border rounded-3 p-3 bg-white mt-2">
+                            <div class="comments-list mb-3" id="comments-list-${r.log.id}" style="max-height: 200px; overflow-y: auto;">
+                                ${commentsListHtml}
+                            </div>
+                            
+                            <form onsubmit="postFamilyComment(event, ${r.log.id}, ${r.id})">
+                                <div class="d-flex gap-2 flex-wrap mb-2">
+                                    <button type="button" onclick="postFamilyCommentPreset(${r.log.id}, ${r.id}, '👍 你很棒！')" class="btn btn-sm btn-outline-primary rounded-pill">👍 你很棒！</button>
+                                    <button type="button" onclick="postFamilyCommentPreset(${r.log.id}, ${r.id}, '❤️ 辛苦了！')" class="btn btn-sm btn-outline-danger rounded-pill">❤️ 辛苦了！</button>
+                                    <button type="button" onclick="postFamilyCommentPreset(${r.log.id}, ${r.id}, '❓ 需要幫忙嗎？')" class="btn btn-sm btn-outline-warning rounded-pill">❓ 需要幫忙嗎？</button>
+                                    <button type="button" onclick="postFamilyCommentPreset(${r.log.id}, ${r.id}, '🏃 我晚點過去看你')" class="btn btn-sm btn-outline-info rounded-pill">🏃 晚點過去看你</button>
+                                </div>
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="comment-input-${r.id}" name="message" class="form-control rounded-start-pill" placeholder="自訂留言..." onkeydown="if(event.key === 'Enter') { event.preventDefault(); postFamilyComment(event, ${r.log.id}, ${r.id}); }">
+                                    <button class="btn btn-primary rounded-end-pill px-3" type="submit"><i class="bi bi-send-fill"></i></button>
+                                </div>
+                            </form>
+                        </div>`;
+                    }
+
+                    remindersHtml += `
+                    <li class="list-group-item bg-transparent py-3 border-bottom-0">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fs-5 fw-bold text-dark">${escapeHtml(r.title)} (${escapeHtml(r.remind_time)})</span>
+                            ${statusBadge}
+                        </div>
+                        ${commentsHtml}
+                    </li>`;
+                });
+            } else {
+                remindersHtml = `
+                <li class="list-group-item bg-transparent text-center text-muted py-4 border-bottom-0">
+                    <i class="bi bi-clock-history fs-3 d-block mb-2"></i>今日尚無提醒事項
+                </li>`;
+            }
+
+            html += `
+            <div class="col-xl-6 mb-4">
+                <div class="card shadow border-0 h-100 rounded-4 overflow-hidden">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0 fw-bold text-dark"><i class="bi bi-person-circle text-primary me-2"></i>${escapeHtml(es.elder.display_name)}</h3>
+                        <div>
+                            ${checkinBadge}
+                        </div>
+                    </div>
+                    <div class="card-body px-4 pb-4">
+                        <p class="text-muted mb-4 fs-5"><i class="bi bi-telephone-fill me-2"></i>聯絡電話：${escapeHtml(es.elder.phone || '未提供')}</p>
+                        
+                        <h5 class="text-muted fw-bold mb-3"><i class="bi bi-activity me-2"></i>最近動態</h5>
+                        <div class="bg-light rounded-4 p-2 border mb-4">
+                            <ul class="list-group list-group-flush rounded-3">
+                                ${recentRecordsHtml}
+                            </ul>
+                        </div>
+
+                        <h5 class="text-muted fw-bold mb-3"><i class="bi bi-card-checklist me-2"></i>今日提醒執行狀況</h5>
+                        <div class="bg-light rounded-4 p-2 border">
+                            <ul class="list-group list-group-flush rounded-3">
+                                ${remindersHtml}
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-top-0 px-4 pb-4 pt-0">
+                        <a href="/family/reminders" class="btn btn-outline-primary w-100 fw-bold rounded-pill py-2">
+                            <i class="bi bi-bell-fill me-2"></i>管理提醒事項
+                        </a>
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        container.innerHTML = html;
+
+        // 恢復焦點
+        if (activeId) {
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.value = activeVal;
+                activeEl.focus();
+                if (activeSelectionStart !== null && activeSelectionEnd !== null) {
+                    activeEl.setSelectionRange(activeSelectionStart, activeSelectionEnd);
+                }
+            }
+        }
+
+        // 滾動討論串至底部
+        document.querySelectorAll('.comments-list').forEach(el => {
+            el.scrollTop = el.scrollHeight;
+        });
+    }
+
+    function pollDashboardData() {
+        fetch("/family/api/dashboard_data")
+            .then(res => {
+                if (res.status === 401 || res.redirected) return;
+                return res.json();
+            })
+            .then(data => {
+                if (!data || !data.elder_status) return;
+
+                const currentStr = JSON.stringify(data.elder_status);
+
+                // SOS 狀態檢查 (獨立於 DOM 更新，讓已 Dismiss 的 SOS 狀態正確維持)
+                let activeSOS = null;
+                let dismissedIds = JSON.parse(localStorage.getItem('dismissed_sos_ids') || '[]');
+
+                data.elder_status.forEach(es => {
+                    if (es.recent_records && es.recent_records.length > 0) {
+                        const latestSOS = es.recent_records.find(r => r.type === 'SOS');
+                        if (latestSOS && !dismissedIds.includes(latestSOS.id)) {
+                            activeSOS = {
+                                recordId: latestSOS.id,
+                                elderName: es.elder.display_name,
+                                time: latestSOS.created_at
+                            };
+                        }
+                    }
+                });
+
+                if (activeSOS) {
+                    triggerSOS(activeSOS);
+                } else {
+                    stopAlarmSound();
+                    const overlay = document.getElementById('sos-alert-overlay');
+                    if (overlay) {
+                        overlay.classList.add('d-none');
+                        overlay.style.setProperty('display', 'none', 'important');
+                    }
+                }
+
+                if (knownDashboardDataStr !== currentStr) {
+                    knownDashboardDataStr = currentStr;
+                    updateFamilyDashboardDOM(data.elder_status);
+                }
+            })
+            .catch(err => console.error("Error polling dashboard data:", err));
+    }
+
+    window.addEventListener('load', () => {
+        // 初次加載滾動討論串至底部
+        document.querySelectorAll('.comments-list').forEach(el => {
+            el.scrollTop = el.scrollHeight;
+        });
+        
+        // 開始輪詢，設定 3 秒
+        pollDashboardData();
+        setInterval(pollDashboardData, 3000);
+    });
+</script>
+
+<style>
+    @keyframes flash-red {
+        from { background-color: rgba(220, 53, 69, 0.95); }
+        to { background-color: rgba(120, 10, 20, 0.97); }
+    }
+</style>
 {% endif %}
 {% endblock %}

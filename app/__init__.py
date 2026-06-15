@@ -25,11 +25,11 @@ def create_app():
     from app.routes.elder import elder_bp
     from app.routes.family import family_bp
 
-    # Blueprints already define url_prefix internally
+    # Register blueprints with appropriate url_prefixes to avoid path conflicts
     app.register_blueprint(main_bp)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(elder_bp)
-    app.register_blueprint(family_bp)
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(elder_bp, url_prefix='/elder')
+    app.register_blueprint(family_bp, url_prefix='/family')
 
     return app
 

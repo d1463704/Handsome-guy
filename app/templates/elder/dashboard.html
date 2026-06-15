@@ -207,6 +207,12 @@
                 </div>`;
         }
 
+        // 紀錄目前正在輸入的欄位與游標位置，避免更新時遺失焦點與輸入內容
+        const activeId = document.activeElement ? document.activeElement.id : null;
+        const activeVal = activeId && activeId.startsWith('comment-input-') ? document.activeElement.value : '';
+        const activeSelectionStart = activeId && activeId.startsWith('comment-input-') ? document.activeElement.selectionStart : null;
+        const activeSelectionEnd = activeId && activeId.startsWith('comment-input-') ? document.activeElement.selectionEnd : null;
+
         const list = document.getElementById('reminders-list');
         let html = '';
 
@@ -267,7 +273,7 @@
                     </div>
                     
                     <div class="d-flex gap-2">
-                        <input type="text" id="comment-input-${r.id}" class="form-control form-control-lg rounded-pill border-0 shadow-sm" placeholder="寫點什麼回覆家屬...">
+                        <input type="text" id="comment-input-${r.id}" class="form-control form-control-lg rounded-pill border-0 shadow-sm" placeholder="寫點什麼回覆家屬..." onkeydown="if(event.key === 'Enter') postComment(${r.log.id}, ${r.id})">
                         <button onclick="postComment(${r.log.id}, ${r.id})" class="btn btn-primary rounded-pill px-4 shadow-sm">
                             <i class="bi bi-send-fill"></i>
                         </button>
@@ -278,6 +284,18 @@
         });
 
         list.innerHTML = html;
+
+        // 恢復先前輸入的狀態與焦點
+        if (activeId) {
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) {
+                activeEl.value = activeVal;
+                activeEl.focus();
+                if (activeSelectionStart !== null && activeSelectionEnd !== null) {
+                    activeEl.setSelectionRange(activeSelectionStart, activeSelectionEnd);
+                }
+            }
+        }
         
         // 將討論串滾動到最底
         document.querySelectorAll('.comments-section').forEach(el => {

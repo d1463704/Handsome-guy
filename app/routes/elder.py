@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, session, B
 from app.models import status, reminder, user, reminder_log
 from functools import wraps
 
-elder_bp = Blueprint('elder', __name__)
+elder_bp = Blueprint('elder', __name__, url_prefix='/elder')
 
 
 def elder_required(f):

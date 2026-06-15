@@ -3,7 +3,7 @@ from flask import render_template, request, redirect, url_for, flash, session, B
 from app.models import user, status, reminder, reminder_log
 from functools import wraps
 
-family_bp = Blueprint('family', __name__)
+family_bp = Blueprint('family', __name__, url_prefix='/family')
 
 
 def family_required(f):
@@ -59,17 +59,67 @@ def dashboard():
 
     return render_template('family/dashboard.html', elder_status=elder_status)
 
+@family_bp.route('/api/dashboard_data')
+def api_dashboard_data():
+    family_id = session.get('user_id')
+    if not family_id or session.get('role') not in ('family', 'nurse'):
+        return {"error": "Unauthorized"}, 401
+        
+    elders = user.get_bound_elders(family_id)
+    elder_status = []
+    for elder in elders:
+        elder_id = elder['id']
+        recent_records = status.get_records_by_elder(elder_id, limit=5)
+        checkin_today = status.get_today_checkin(elder_id)
+        has_checkin_today = checkin_today is not None
+        today_mood = checkin_today['mood_score'] if checkin_today else None
+        
+        # 取得今日提醒事項與回覆狀態
+        elder_reminders = reminder.get_reminders_by_elder(elder_id, active_only=True)
+        logs_with_comments = reminder_log.get_today_logs_with_comments_by_elder(elder_id)
+        reminders_with_status = []
+        for r in elder_reminders:
+            r_dict = dict(r)
+            r_dict['log'] = logs_with_comments.get(r['id'])
+            reminders_with_status.append(r_dict)
+
+        elder_status.append({
+            'elder': {
+                'id': elder['id'],
+                'display_name': elder['display_name'],
+                'phone': elder['phone']
+            },
+            'recent_records': [dict(rr) for rr in recent_records],
+            'has_checkin_today': has_checkin_today,
+            'today_mood': today_mood,
+            'reminders_with_status': reminders_with_status
+        })
+        
+    return {"elder_status": elder_status}
+
 @family_bp.route('/api/logs/<int:log_id>/comment', methods=['POST'])
 def api_reminder_comment(log_id):
     family_id = session.get('user_id')
     if not family_id or session.get('role') not in ('family', 'nurse'):
         return {"error": "Unauthorized"}, 401
         
-    message = request.form.get('message', '').strip()
+    if request.is_json:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+    else:
+        message = request.form.get('message', '').strip()
+
     if not message:
         return {"error": "Message is empty"}, 400
         
     comment_id = reminder_log.add_comment(log_id, family_id, message)
+    
+    if request.is_json:
+        if comment_id:
+            return {"success": True, "comment_id": comment_id}
+        else:
+            return {"error": "Failed to add comment"}, 500
+            
     if comment_id:
         flash('留言成功', 'success')
     else:
